@@ -1,5 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 ---
 
 <Layout title="Panel de Administrador">
@@ -28,7 +30,7 @@ import Layout from "../layouts/Layout.astro";
     <div id="message"></div>
   </div>
 
-  <script>
+  <script define:vars={{ API_URL }}>
     const accessToken = localStorage.getItem('accessToken');
     const messageEl = document.getElementById('message');
 
@@ -38,7 +40,7 @@ import Layout from "../layouts/Layout.astro";
 
     async function loadEventos() {
       try {
-        const response = await fetch('http://localhost:3001/api/admin/eventos', {
+        const response = await fetch(`${API_URL}/api/admin/eventos`, {
           headers: {
             'Authorization': 'Bearer ' + accessToken,
           },
@@ -86,7 +88,7 @@ import Layout from "../layouts/Layout.astro";
 
     async function loadUsuarios() {
       try {
-        const response = await fetch('http://localhost:3001/api/admin/usuarios', {
+        const response = await fetch(`${API_URL}/api/admin/usuarios`, {
           headers: {
             'Authorization': 'Bearer ' + accessToken,
           },

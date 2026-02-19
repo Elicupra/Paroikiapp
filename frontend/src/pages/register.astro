@@ -1,5 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 ---
 
 <Layout title="Registro de Participante">
@@ -29,7 +31,7 @@ import Layout from "../layouts/Layout.astro";
     <div id="message"></div>
   </div>
 
-  <script>
+  <script define:vars={{ API_URL }}>
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
     const messageEl = document.getElementById('message');
@@ -47,7 +49,7 @@ import Layout from "../layouts/Layout.astro";
 
     async function loadEventInfo() {
       try {
-        const response = await fetch(`http://localhost:3001/register/${token}`);
+        const response = await fetch(`${API_URL}/register/${token}`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -74,7 +76,7 @@ import Layout from "../layouts/Layout.astro";
       try {
         messageEl.innerHTML = '';
 
-        const response = await fetch(`http://localhost:3001/register/${token}/joven`, {
+        const response = await fetch(`${API_URL}/register/${token}/joven`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

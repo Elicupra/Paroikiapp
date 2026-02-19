@@ -1,5 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 ---
 
 <Layout title="Panel de Monitor">
@@ -36,7 +38,7 @@ import Layout from "../layouts/Layout.astro";
     <div id="message"></div>
   </div>
 
-  <script>
+  <script define:vars={{ API_URL }}>
     const accessToken = localStorage.getItem('accessToken');
     const messageEl = document.getElementById('message');
 
@@ -46,7 +48,7 @@ import Layout from "../layouts/Layout.astro";
 
     async function loadJovenes() {
       try {
-        const response = await fetch('http://localhost:3001/api/monitor/jovenes', {
+        const response = await fetch(`${API_URL}/api/monitor/jovenes`, {
           headers: {
             'Authorization': 'Bearer ' + accessToken,
           },
@@ -94,7 +96,7 @@ import Layout from "../layouts/Layout.astro";
       try {
         messageEl.innerHTML = '';
 
-        const response = await fetch('http://localhost:3001/api/monitor/pagos', {
+        const response = await fetch(`${API_URL}/api/monitor/pagos`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

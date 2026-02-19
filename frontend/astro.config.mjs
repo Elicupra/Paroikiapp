@@ -14,5 +14,9 @@ export default defineConfig({
     define: {
       __API_URL__: JSON.stringify(process.env.API_URL || 'http://localhost:3001'),
     },
+    ssr: {
+      external: ['@astrojs/node'],
+    },
   },
+  integrations: [],
 });
