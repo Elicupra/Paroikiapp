@@ -1,0 +1,77 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Login">
+  <div style="max-width: 400px; margin: 3rem auto;">
+    <h2 style="text-align: center; margin-bottom: 2rem;">Inicia Sesión</h2>
+
+    <form id="loginForm">
+      <div style="margin-bottom: 1rem;">
+        <label for="email" style="display: block; margin-bottom: 0.5rem;">Email</label>
+        <input type="email" id="email" name="email" required style="width: 100%;" />
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label for="password" style="display: block; margin-bottom: 0.5rem;">Contraseña</label>
+        <input type="password" id="password" name="password" required style="width: 100%;" />
+      </div>
+
+      <button type="submit" style="width: 100%; padding: 0.75rem;">Inicia Sesión</button>
+    </form>
+
+    <div id="message"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const messageEl = document.getElementById('message');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        messageEl.innerHTML = '';
+
+        const response = await fetch('http://localhost:3001/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          messageEl.className = 'error';
+          messageEl.textContent = data.error?.message || 'Error al iniciar sesión';
+          return;
+        }
+
+        // Guardar tokens en localStorage
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('refreshToken', data.refreshToken);
+        localStorage.setItem('user', JSON.stringify(data.user));
+
+        messageEl.className = 'success';
+        messageEl.textContent = 'Iniciando sesión...';
+
+        // Redirigir según el rol
+        setTimeout(() => {
+          if (data.user.rol === 'organizador') {
+            window.location.href = '/admin';
+          } else {
+            window.location.href = '/monitor';
+          }
+        }, 1000);
+      } catch (error) {
+        messageEl.className = 'error';
+        messageEl.textContent = 'Error de conexión: ' + error.message;
+      }
+    });
+  </script>
+</Layout>

@@ -1,0 +1,7 @@
+jest.config.js
+node_modules/
+.git/
+.env
+dist/
+build/
+coverage/

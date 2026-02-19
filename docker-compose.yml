@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: paroikiapp-db
+    environment:
+      POSTGRES_USER: camposter
+      POSTGRES_PASSWORD: camposter123
+      POSTGRES_DB: campregister
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U camposter"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: paroikiapp-backend
+    environment:
+      DATABASE_URL: postgresql://camposter:camposter123@postgres:5432/campregister
+      JWT_SECRET: ${JWT_SECRET:-your-64-character-random-secret-key-here-must-be-very-long-and-random}
+      JWT_EXPIRES_IN: 15m
+      REFRESH_TOKEN_EXPIRES_IN: 7d
+      NODE_ENV: production
+      FRONTEND_URL: http://localhost
+      API_PORT: 3001
+      UPLOADS_PATH: /data/uploads
+      SMTP_HOST: ${SMTP_HOST:-smtp.brevo.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      NOTIFY_FROM: ${NOTIFY_FROM:-"Paroikiapp <no-reply@example.com>"}
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - uploads:/data/uploads
+    command: sh -c "npm run migrate && npm start"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: paroikiapp-frontend
+    environment:
+      API_URL: http://backend:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:alpine
+    container_name: paroikiapp-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  postgres_data:
+  uploads:
+
+networks:
+  default:
+    name: paroikiapp-network

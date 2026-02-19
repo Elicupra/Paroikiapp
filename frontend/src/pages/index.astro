@@ -1,0 +1,31 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Inicio - Paroikiapp">
+  <h1 style="margin: 2rem 0;">Bienvenido a Paroikiapp</h1>
+  
+  <p style="font-size: 1.1rem; margin: 1rem 0;">
+    Sistema de registro de eventos juveniles (campamentos, peregrinaciones, viajes)
+  </p>
+
+  <div style="margin: 2rem 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+    <div style="background: white; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      <h3>Para Jóvenes</h3>
+      <p>Regístrate en un evento usando el enlace compartido por tu monitor.</p>
+      <a href="/register" style="display: inline-block; margin-top: 1rem;">Ir a Registro →</a>
+    </div>
+
+    <div style="background: white; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      <h3>Para Monitores</h3>
+      <p>Accede al panel de gestión para administrar jóvenes y pagos.</p>
+      <a href="/login" style="display: inline-block; margin-top: 1rem;">Inicia Sesión →</a>
+    </div>
+
+    <div style="background: white; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      <h3>Para Organizadores</h3>
+      <p>Gestiona eventos, usuarios y monitorea toda la aplicación.</p>
+      <a href="/login" style="display: inline-block; margin-top: 1rem;">Panel Admin →</a>
+    </div>
+  </div>
+</Layout>

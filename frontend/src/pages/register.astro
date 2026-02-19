@@ -1,0 +1,107 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Registro de Participante">
+  <div style="max-width: 600px; margin: 2rem auto;">
+    <h2 style="text-align: center; margin-bottom: 2rem;">Registro de Nuevo Participante</h2>
+
+    <div id="eventInfo" style="background: white; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 2rem; display: none;">
+      <h3 id="eventName"></h3>
+      <p>Evento: <span id="eventType"></span></p>
+      <p>Monitor: <span id="monitorName"></span></p>
+    </div>
+
+    <form id="registerForm">
+      <div style="margin-bottom: 1rem;">
+        <label for="nombre" style="display: block; margin-bottom: 0.5rem;">Nombre *</label>
+        <input type="text" id="nombre" name="nombre" required style="width: 100%;" />
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label for="apellidos" style="display: block; margin-bottom: 0.5rem;">Apellidos *</label>
+        <input type="text" id="apellidos" name="apellidos" required style="width: 100%;" />
+      </div>
+
+      <button type="submit" style="width: 100%; padding: 0.75rem;">Registrarse</button>
+    </form>
+
+    <div id="message"></div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const messageEl = document.getElementById('message');
+    const eventInfoDiv = document.getElementById('eventInfo');
+    const form = document.getElementById('registerForm');
+
+    if (!token) {
+      messageEl.className = 'error';
+      messageEl.textContent = 'Token de acceso no proporcionado';
+      form.style.display = 'none';
+    } else {
+      // Cargar información del evento
+      loadEventInfo();
+    }
+
+    async function loadEventInfo() {
+      try {
+        const response = await fetch(`http://localhost:3001/register/${token}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error?.message || 'Error al cargar el evento');
+        }
+
+        document.getElementById('eventName').textContent = data.evento.nombre;
+        document.getElementById('eventType').textContent = data.evento.tipo;
+        document.getElementById('monitorName').textContent = data.monitor.nombre;
+        eventInfoDiv.style.display = 'block';
+      } catch (error) {
+        messageEl.className = 'error';
+        messageEl.textContent = 'Error: ' + error.message;
+        form.style.display = 'none';
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const nombre = document.getElementById('nombre').value;
+      const apellidos = document.getElementById('apellidos').value;
+
+      try {
+        messageEl.innerHTML = '';
+
+        const response = await fetch(`http://localhost:3001/register/${token}/joven`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ nombre, apellidos }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          messageEl.className = 'error';
+          messageEl.textContent = data.error?.message || 'Error al registrar';
+          return;
+        }
+
+        messageEl.className = 'success';
+        messageEl.textContent = '¡Registrado exitosamente! ' + data.mensaje;
+        form.reset();
+
+        // Opcionalmente, redirigir después de 3 segundos
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 3000);
+      } catch (error) {
+        messageEl.className = 'error';
+        messageEl.textContent = 'Error de conexión: ' + error.message;
+      }
+    });
+  </script>
+</Layout>

@@ -1,0 +1,134 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Panel de Monitor">
+  <div style="max-width: 1000px; margin: 2rem auto;">
+    <h2>Panel de Monitor</h2>
+
+    <div style="margin-bottom: 1rem;">
+      <button onclick="logout()" style="background-color: var(--color-danger);">Cerrar Sesión</button>
+    </div>
+
+    <h3 style="margin-top: 2rem;">Jóvenes Registrados</h3>
+    <div id="jovenesList" style="margin: 1rem 0;"></div>
+
+    <h3 style="margin-top: 2rem;">Registrar Pago</h3>
+    <form id="pagoForm" style="background: white; padding: 1.5rem; border-radius: 0.5rem; max-width: 500px;">
+      <div style="margin-bottom: 1rem;">
+        <label for="joven_id" style="display: block; margin-bottom: 0.5rem;">Seleccionar Joven</label>
+        <select id="joven_id" name="joven_id" required style="width: 100%;"></select>
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label for="plazo_numero" style="display: block; margin-bottom: 0.5rem;">Plazo #</label>
+        <input type="number" id="plazo_numero" name="plazo_numero" min="1" required style="width: 100%;" />
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label for="cantidad" style="display: block; margin-bottom: 0.5rem;">Cantidad (€)</label>
+        <input type="number" id="cantidad" name="cantidad" step="0.01" required style="width: 100%;" />
+      </div>
+
+      <button type="submit">Registrar Pago</button>
+    </form>
+
+    <div id="message"></div>
+  </div>
+
+  <script>
+    const accessToken = localStorage.getItem('accessToken');
+    const messageEl = document.getElementById('message');
+
+    if (!accessToken) {
+      window.location.href = '/login';
+    }
+
+    async function loadJovenes() {
+      try {
+        const response = await fetch('http://localhost:3001/api/monitor/jovenes', {
+          headers: {
+            'Authorization': 'Bearer ' + accessToken,
+          },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error?.message || 'Error al cargar jóvenes');
+        }
+
+        const jovenesList = document.getElementById('jovenesList');
+        const selectJoven = document.getElementById('joven_id');
+
+        jovenesList.innerHTML = '';
+        selectJoven.innerHTML = '<option value="">-- Seleccionar --</option>';
+
+        data.data.forEach(joven => {
+          const div = document.createElement('div');
+          div.style.cssText = 'background: white; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;';
+          div.innerHTML = `
+            <h4>${joven.nombre} ${joven.apellidos}</h4>
+            <p>Documentos: ${joven.documentos_count} | Pagos: ${joven.pagos_count} | Pagado: €${joven.total_pagado || 0}</p>
+          `;
+          jovenesList.appendChild(div);
+
+          const option = document.createElement('option');
+          option.value = joven.id;
+          option.textContent = joven.nombre + ' ' + joven.apellidos;
+          selectJoven.appendChild(option);
+        });
+      } catch (error) {
+        messageEl.className = 'error';
+        messageEl.textContent = 'Error: ' + error.message;
+      }
+    }
+
+    document.getElementById('pagoForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const joven_id = document.getElementById('joven_id').value;
+      const plazo_numero = parseInt(document.getElementById('plazo_numero').value);
+      const cantidad = parseFloat(document.getElementById('cantidad').value);
+
+      try {
+        messageEl.innerHTML = '';
+
+        const response = await fetch('http://localhost:3001/api/monitor/pagos', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + accessToken,
+          },
+          body: JSON.stringify({ joven_id, plazo_numero, cantidad }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error?.message || 'Error al registrar pago');
+        }
+
+        messageEl.className = 'success';
+        messageEl.textContent = data.mensaje;
+        document.getElementById('pagoForm').reset();
+
+        // Recargar jóvenes
+        setTimeout(() => loadJovenes(), 1000);
+      } catch (error) {
+        messageEl.className = 'error';
+        messageEl.textContent = 'Error: ' + error.message;
+      }
+    });
+
+    function logout() {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      window.location.href = '/';
+    }
+
+    // Cargar datos iniciales
+    loadJovenes();
+  </script>
+</Layout>
