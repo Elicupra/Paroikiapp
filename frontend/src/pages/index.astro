@@ -2,30 +2,157 @@
 import Layout from "../layouts/Layout.astro";
 ---
 
-<Layout title="Inicio - Paroikiapp">
-  <h1 style="margin: 2rem 0;">Bienvenido a Paroikiapp</h1>
-  
-  <p style="font-size: 1.1rem; margin: 1rem 0;">
-    Sistema de registro de eventos juveniles (campamentos, peregrinaciones, viajes)
-  </p>
-
-  <div style="margin: 2rem 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
-    <div style="background: white; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-      <h3>Para Jóvenes</h3>
-      <p>Regístrate en un evento usando el enlace compartido por tu monitor.</p>
-      <a href="/register" style="display: inline-block; margin-top: 1rem;">Ir a Registro →</a>
+<Layout title="Inicio">
+  <!-- Hero Section -->
+  <section style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 4rem 2rem; text-align: center;">
+    <div style="max-width: 800px; margin: 0 auto;">
+      <h1 style="font-size: 3rem; margin-bottom: 1rem; font-weight: 700;">ParoikiApp</h1>
+      <p style="font-size: 1.25rem; margin-bottom: 2rem; opacity: 0.95;">Sistema de gestión de eventos juveniles - Campamentos, retiros y actividades parroquiales</p>
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="/login" style="background: white; color: #667eea; padding: 1rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; display: inline-block;">
+          Iniciar Sesión
+        </a>
+        <a href="#eventos" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white; padding: 1rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; display: inline-block;">
+          Ver Eventos
+        </a>
+      </div>
     </div>
+  </section>
 
-    <div style="background: white; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-      <h3>Para Monitores</h3>
-      <p>Accede al panel de gestión para administrar jóvenes y pagos.</p>
-      <a href="/login" style="display: inline-block; margin-top: 1rem;">Inicia Sesión →</a>
-    </div>
+  <!-- Features Section -->
+  <section style="padding: 4rem 2rem; background: white;">
+    <div style="max-width: 1200px; margin: 0 auto;">
+      <h2 style="text-align: center; font-size: 2rem; margin-bottom: 3rem; color: #1f2937;">¿Qué Ofrecemos?</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem;">
+        
+        <div style="text-align: center; padding: 2rem;">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">📝</div>
+          <h3 style="color: #667eea; margin-bottom: 0.5rem;">Registro Fácil</h3>
+          <p style="color: #6b7280;">Inscripción rápida y sencilla a eventos mediante enlaces compartidos</p>
+        </div>
 
-    <div style="background: white; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-      <h3>Para Organizadores</h3>
-      <p>Gestiona eventos, usuarios y monitorea toda la aplicación.</p>
-      <a href="/login" style="display: inline-block; margin-top: 1rem;">Panel Admin →</a>
+        <div style="text-align: center; padding: 2rem;">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">💳</div>
+          <h3 style="color: #667eea; margin-bottom: 0.5rem;">Gestión de Pagos</h3>
+          <p style="color: #6b7280;">Control de pagos por plazos y seguimiento de cuotas</p>
+        </div>
+
+        <div style="text-align: center; padding: 2rem;">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">📄</div>
+          <h3 style="color: #667eea; margin-bottom: 0.5rem;">Documentación</h3>
+          <p style="color: #6b7280;">Carga y gestión de documentos requeridos</p>
+        </div>
+
+        <div style="text-align: center; padding: 2rem;">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
+          <h3 style="color: #667eea; margin-bottom: 0.5rem;">Monitores</h3>
+          <p style="color: #6b7280;">Panel dedicado para monitores con gestión de participantes</p>
+        </div>
+
+        <div style="text-align: center; padding: 2rem;">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+          <h3 style="color: #667eea; margin-bottom: 0.5rem;">Estadísticas</h3>
+          <p style="color: #6b7280;">Reportes y análisis de inscripciones y pagos</p>
+        </div>
+
+        <div style="text-align: center; padding: 2rem;">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
+          <h3 style="color: #667eea; margin-bottom: 0.5rem;">Seguro</h3>
+          <p style="color: #6b7280;">Plataforma segura con autenticación y protección de datos</p>
+        </div>
+
+      </div>
     </div>
-  </div>
+  </section>
+
+  <!-- Eventos Section -->
+  <section id="eventos" style="padding: 4rem 2rem; background: #f9fafb;">
+    <div style="max-width: 1200px; margin: 0 auto;">
+      <h2 style="text-align: center; font-size: 2rem; margin-bottom: 3rem; color: #1f2937;">Eventos Disponibles</h2>
+      <div id="eventosContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2rem;">
+        <!-- Se llena con JavaScript -->
+      </div>
+      <div id="loadingEventos" style="text-align: center; padding: 3rem;">
+        <p style="color: #6b7280;">Cargando eventos...</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer style="background: #1f2937; color: white; padding: 2rem; text-align: center;">
+    <p>&copy; 2026 ParoikiApp - Sistema de gestión de eventos juveniles</p>
+  </footer>
+
+  <script>
+    const API_URL = 'http://localhost:3001';
+
+    async function loadEventos() {
+      const container = document.getElementById('eventosContainer');
+      const loading = document.getElementById('loadingEventos');
+
+      try {
+        const response = await fetch(`${API_URL}/api/public/eventos`);
+        
+        if (!response.ok) {
+          throw new Error('Error al cargar eventos');
+        }
+
+        const data = await response.json();
+        loading.style.display = 'none';
+
+        if (data.data && data.data.length > 0) {
+          container.innerHTML = data.data.map(evento => `
+            <div style="background: white; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;">
+              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.5rem; color: white;">
+                <h3 style="margin: 0 0 0.5rem 0; font-size: 1.5rem;">${evento.nombre}</h3>
+                <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.875rem; display: inline-block;">
+                  ${evento.tipo}
+                </span>
+              </div>
+              <div style="padding: 1.5rem;">
+                ${evento.descripcion ? `<p style="color: #6b7280; margin-bottom: 1rem;">${evento.descripcion}</p>` : ''}
+                
+                <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                  ${evento.fecha_inicio ? `
+                    <div style="flex: 1; min-width: 120px;">
+                      <div style="font-size: 0.875rem; color: #9ca3af;">Inicio</div>
+                      <div style="font-weight: 600; color: #1f2937;">${new Date(evento.fecha_inicio).toLocaleDateString('es-ES')}</div>
+                    </div>
+                  ` : ''}
+                  ${evento.fecha_fin ? `
+                    <div style="flex: 1; min-width: 120px;">
+                      <div style="font-size: 0.875rem; color: #9ca3af;">Fin</div>
+                      <div style="font-weight: 600; color: #1f2937;">${new Date(evento.fecha_fin).toLocaleDateString('es-ES')}</div>
+                    </div>
+                  ` : ''}
+                </div>
+
+                ${evento.precio_base ? `
+                  <div style="font-size: 1.5rem; font-weight: 700; color: #667eea; margin-bottom: 1rem;">
+                    €${parseFloat(evento.precio_base).toFixed(2)}
+                  </div>
+                ` : ''}
+
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+                  <div style="color: ${evento.activo ? '#10b981' : '#ef4444'}; font-weight: 600; font-size: 0.875rem;">
+                    ${evento.activo ? 'OK Inscripciones abiertas' : '* Inscripciones cerradas'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          container.innerHTML = '<p style="text-align: center; color: #6b7280; grid-column: 1/-1;">No hay eventos disponibles en este momento</p>';
+        }
+
+      } catch (error) {
+        console.error('Error loading eventos:', error);
+        loading.style.display = 'none';
+        container.innerHTML = '<p style="text-align: center; color: #ef4444; grid-column: 1/-1;">Error al cargar eventos. Por favor, intenta más tarde.</p>';
+      }
+    }
+
+    // Cargar eventos al iniciar
+    loadEventos();
+  </script>
 </Layout>

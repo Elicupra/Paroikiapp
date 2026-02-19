@@ -198,9 +198,51 @@ const updatePago = async (req, res, next) => {
   }
 };
 
+// GET /api/monitor/registration-link - Obtener enlace de registro del monitor
+const getRegistrationLink = async (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+
+    // Obtener los monitores asociados al usuario
+    const monitorResult = await pool.query(
+      `SELECT m.id, m.enlace_token, m.evento_id, e.nombre as evento_nombre
+       FROM monitores m
+       JOIN eventos e ON m.evento_id = e.id
+       WHERE m.usuario_id = $1 AND m.activo = true
+       ORDER BY m.creado_en DESC`,
+      [userId]
+    );
+
+    if (!monitorResult.rows.length) {
+      return res.status(404).json({
+        error: {
+          code: 'NO_MONITORS',
+          message: 'No registration links available',
+        },
+      });
+    }
+
+    const links = monitorResult.rows.map(monitor => ({
+      id: monitor.id,
+      token: monitor.enlace_token,
+      evento_id: monitor.evento_id,
+      evento_nombre: monitor.evento_nombre,
+      url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/register?token=${monitor.enlace_token}`,
+    }));
+
+    res.json({
+      data: links,
+      total: links.length,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getJovenes,
   getJovenDetalle,
   createPago,
   updatePago,
+  getRegistrationLink,
 };

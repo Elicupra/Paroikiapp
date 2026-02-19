@@ -5,6 +5,7 @@ require('dotenv').config();
 const pool = require('./models/db');
 
 // Import routes
+const publicRoutes = require('./routes/public');
 const authRoutes = require('./routes/auth');
 const registerRoutes = require('./routes/register');
 const monitorRoutes = require('./routes/monitor');
@@ -12,8 +13,7 @@ const adminRoutes = require('./routes/admin');
 const documentRoutes = require('./routes/documents');
 
 // Import middleware
-const { errorHandler } = require('./middleware/errorHandler');
-const { requestLogger } = require('./middleware/requestLogger');
+const { errorHandler, requestLogger } = require('./middleware/errorHandler');
 
 const app = express();
 
@@ -56,6 +56,7 @@ app.use(express.urlencoded({ limit: '5mb', extended: true }));
 app.use(requestLogger);
 
 // Routes
+app.use('/api/public', publicRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/register', registerRoutes);
 app.use('/api/monitor', monitorRoutes);

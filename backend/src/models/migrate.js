@@ -1,6 +1,9 @@
 const pool = require('./db');
 
 const schema = `
+-- Establecer el schema
+SET search_path TO paroikiapp;
+
 -- Tipos enumerados
 CREATE TYPE tipo_evento AS ENUM ('campamento', 'peregrinacion', 'viaje', 'otro');
 CREATE TYPE rol_usuario AS ENUM ('monitor', 'organizador');

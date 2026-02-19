@@ -1,0 +1,404 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Gestión de Eventos">
+  <div style="max-width: 1400px; margin: 2rem auto; padding: 0 1rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+      <h2 style="margin: 0;">Gestión de Eventos</h2>
+      <button id="btnNuevoEvento" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">
+        + Nuevo Evento
+      </button>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 2px solid #e5e7eb;">
+      <button id="tabActivos" class="tab active" style="padding: 0.75rem 1.5rem; background: none; border: none; cursor: pointer; font-weight: 600; border-bottom: 3px solid #667eea; color: #667eea;">
+        Eventos Activos
+      </button>
+      <button id="tabPasados" class="tab" style="padding: 0.75rem 1.5rem; background: none; border: none; cursor: pointer; font-weight: 600; border-bottom: 3px solid transparent; color: #6b7280;">
+        Eventos Pasados
+      </button>
+    </div>
+
+    <!-- Contenido de tabs -->
+    <div id="tabContent">
+      <div id="loading" style="text-align: center; padding: 3rem;">
+        <p style="color: #666;">Cargando eventos...</p>
+      </div>
+      <div id="eventosContainer" style="display: none;">
+        <!-- Grid de eventos se carga aquí -->
+      </div>
+    </div>
+
+    <div id="message" style="margin-top: 1rem; padding: 1rem; border-radius: 0.5rem; display: none;"></div>
+  </div>
+
+  <!-- Modal crear/editar evento -->
+  <div id="modalEvento" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
+    <div style="min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 2rem;">
+      <div style="background: white; border-radius: 1rem; max-width: 700px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+        <div style="padding: 2rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+          <h3 id="modalTitle" style="margin: 0; font-size: 1.5rem;">Nuevo Evento</h3>
+          <button id="btnCerrarModal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; padding: 0; width: 2rem; height: 2rem;">&times;</button>
+        </div>
+        
+        <form id="formEvento" style="padding: 2rem;">
+          <input type="hidden" id="evento_id" />
+          
+          <div style="display: grid; gap: 1.5rem;">
+            <!-- Nombre -->
+            <div>
+              <label for="nombre" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Nombre del Evento *</label>
+              <input type="text" id="nombre" required style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem;" />
+            </div>
+
+            <!-- Tipo -->
+            <div>
+              <label for="tipo" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Tipo *</label>
+              <select id="tipo" required style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; background: white;">
+                <option value="campamento">Campamento</option>
+                <option value="peregrinacion">Peregrinación</option>
+                <option value="viaje">Viaje</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+
+            <!-- Descripción -->
+            <div>
+              <label for="descripcion" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Descripción</label>
+              <textarea id="descripcion" rows="3" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; resize: vertical;"></textarea>
+            </div>
+
+            <!-- Precio y Localización en fila -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div>
+                <label for="precio_base" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Precio (€)</label>
+                <input type="number" id="precio_base" step="0.01" min="0" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem;" />
+              </div>
+              <div>
+                <label for="localizacion" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Localización</label>
+                <input type="text" id="localizacion" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem;" />
+              </div>
+            </div>
+
+            <!-- Fechas -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div>
+                <label for="fecha_inicio" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Fecha Inicio</label>
+                <input type="date" id="fecha_inicio" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem;" />
+              </div>
+              <div>
+                <label for="fecha_fin" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Fecha Fin</label>
+                <input type="date" id="fecha_fin" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem;" />
+              </div>
+            </div>
+
+            <!-- Fotos (URLs) -->
+            <div>
+              <label for="fotos" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Fotos (URLs, una por línea)</label>
+              <textarea id="fotos" rows="3" placeholder="https://ejemplo.com/foto1.jpg&#10;https://ejemplo.com/foto2.jpg" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; resize: vertical;"></textarea>
+              <small style="color: #6b7280;">Ingresa las URLs de las fotos, una por línea</small>
+            </div>
+
+            <!-- Otra información -->
+            <div>
+              <label for="otra_informacion" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Otra Información</label>
+              <textarea id="otra_informacion" rows="4" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; resize: vertical;"></textarea>
+            </div>
+
+            <!-- Activo (solo en edición) -->
+            <div id="activoContainer" style="display: none;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" id="activo" style="width: 1.25rem; height: 1.25rem; cursor: pointer;" />
+                <span style="font-weight: 600;">Evento Activo</span>
+              </label>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 1rem; margin-top: 2rem; justify-content: flex-end;">
+            <button type="button" id="btnCancelar" style="padding: 0.75rem 1.5rem; border: 1px solid #d1d5db; background: white; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">
+              Cancelar
+            </button>
+            <button type="submit" style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">
+              Guardar Evento
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3001';
+    const accessToken = localStorage.getItem('accessToken');
+
+    if (!accessToken) {
+      window.location.href = '/login';
+    }
+
+    let currentTab = 'activos';
+    let eventos = [];
+    let editingEventoId = null;
+
+    // Elementos del DOM
+    const modal = document.getElementById('modalEvento');
+    const form = document.getElementById('formEvento');
+    const messageEl = document.getElementById('message');
+
+    // Cargar eventos
+    async function loadEventos() {
+      try {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('eventosContainer').style.display = 'none';
+
+        const url = `${API_URL}/api/admin/eventos${currentTab === 'pasados' ? '?incluir_pasados=true' : ''}`;
+        const response = await fetch(url, {
+          headers: { 'Authorization': 'Bearer ' + accessToken },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.clear();
+            window.location.href = '/login';
+            return;
+          }
+          throw new Error(data.error?.message || 'Error al cargar eventos');
+        }
+
+        // Filtrar según tab activo
+        eventos = currentTab === 'activos' 
+          ? data.data.filter(e => e.activo) 
+          : data.data.filter(e => !e.activo);
+
+        renderEventos();
+      } catch (error) {
+        console.error('Error loading eventos:', error);
+        showMessage('Error al cargar eventos: ' + error.message, 'error');
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
+
+    // Renderizar eventos
+    function renderEventos() {
+      const container = document.getElementById('eventosContainer');
+      container.style.display = 'grid';
+      container.style.gridTemplateColumns = 'repeat(auto-fill, minmax(350px, 1fr))';
+      container.style.gap = '1.5rem';
+
+      if (eventos.length === 0) {
+        container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 3rem; color: #666;">No hay eventos en esta categoría</p>';
+        return;
+      }
+
+      container.innerHTML = eventos.map(evento => {
+        const fechaInicio = evento.fecha_inicio ? new Date(evento.fecha_inicio).toLocaleDateString('es-ES') : 'N/A';
+        const fechaFin = evento.fecha_fin ? new Date(evento.fecha_fin).toLocaleDateString('es-ES') : 'N/A';
+        const precio = evento.precio_base ? `€${parseFloat(evento.precio_base).toFixed(2)}` : 'N/A';
+        
+        return `
+          <div style="background: white; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.5rem; color: white;">
+              <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem;">${evento.nombre}</h3>
+              <span style="display: inline-block; background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.875rem; text-transform: capitalize;">
+                ${evento.tipo}
+              </span>
+            </div>
+            <div style="padding: 1.5rem;">
+              ${evento.descripcion ? `<p style="color: #6b7280; margin: 0 0 1rem 0; line-height: 1.5;">${evento.descripcion}</p>` : ''}
+              
+              <div style="display: grid; gap: 0.5rem; font-size: 0.9rem;">
+                ${evento.localizacion ? `<p style="margin: 0; color: #374151;"><strong>📍 Localización:</strong> ${evento.localizacion}</p>` : ''}
+                <p style="margin: 0; color: #374151;"><strong>💰 Precio:</strong> ${precio}</p>
+                <p style="margin: 0; color: #374151;"><strong>📅 Inicio:</strong> ${fechaInicio}</p>
+                <p style="margin: 0; color: #374151;"><strong>📅 Fin:</strong> ${fechaFin}</p>
+                ${evento.fotos && evento.fotos.length > 0 ? `<p style="margin: 0; color: #374151;"><strong>📷 Fotos:</strong> ${evento.fotos.length}</p>` : ''}
+              </div>
+
+              <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+                <button onclick="editEvento('${evento.id}')" style="flex: 1; padding: 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;">
+                  Editar
+                </button>
+                ${evento.activo ? `
+                  <button onclick="deleteEvento('${evento.id}')" style="flex: 1; padding: 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;">
+                    Desactivar
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Abrir modal para nuevo evento
+    document.getElementById('btnNuevoEvento').onclick = () => {
+      editingEventoId = null;
+      form.reset();
+      document.getElementById('evento_id').value = '';
+      document.getElementById('modalTitle').textContent = 'Nuevo Evento';
+      document.getElementById('activoContainer').style.display = 'none';
+      modal.style.display = 'block';
+    };
+
+    // Editar evento
+    window.editEvento = async (eventoId) => {
+      try {
+        const response = await fetch(`${API_URL}/api/admin/eventos/${eventoId}`, {
+          headers: { 'Authorization': 'Bearer ' + accessToken },
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error?.message);
+
+        const evento = result.data;
+        editingEventoId = eventoId;
+
+        document.getElementById('evento_id').value = evento.id;
+        document.getElementById('nombre').value = evento.nombre || '';
+        document.getElementById('tipo').value = evento.tipo || 'campamento';
+        document.getElementById('descripcion').value = evento.descripcion || '';
+        document.getElementById('precio_base').value = evento.precio_base || '';
+        document.getElementById('localizacion').value = evento.localizacion || '';
+        document.getElementById('fecha_inicio').value = evento.fecha_inicio || '';
+        document.getElementById('fecha_fin').value = evento.fecha_fin || '';
+        document.getElementById('fotos').value = evento.fotos ? evento.fotos.join('\n') : '';
+        document.getElementById('otra_informacion').value = evento.otra_informacion || '';
+        document.getElementById('activo').checked = evento.activo;
+        document.getElementById('activoContainer').style.display = 'block';
+        document.getElementById('modalTitle').textContent = 'Editar Evento';
+
+        modal.style.display = 'block';
+      } catch (error) {
+        showMessage('Error al cargar evento: ' + error.message, 'error');
+      }
+    };
+
+    // Desactivar evento
+    window.deleteEvento = async (eventoId) => {
+      if (!confirm('¿Estás seguro de desactivar este evento? Los datos no se perderán pero el evento dejará de estar visible.')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/admin/eventos/${eventoId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + accessToken },
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message);
+
+        showMessage('Evento desactivado exitosamente', 'success');
+        loadEventos();
+      } catch (error) {
+        showMessage('Error al desactivar evento: ' + error.message, 'error');
+      }
+    };
+
+    // Guardar evento
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+
+      try {
+        const fotosText = document.getElementById('fotos').value.trim();
+        const fotosArray = fotosText ? fotosText.split('\n').map(url => url.trim()).filter(url => url) : [];
+
+        const eventoData = {
+          nombre: document.getElementById('nombre').value,
+          tipo: document.getElementById('tipo').value,
+          descripcion: document.getElementById('descripcion').value,
+          precio_base: document.getElementById('precio_base').value || null,
+          localizacion: document.getElementById('localizacion').value,
+          fecha_inicio: document.getElementById('fecha_inicio').value || null,
+          fecha_fin: document.getElementById('fecha_fin').value || null,
+          fotos: fotosArray,
+          otra_informacion: document.getElementById('otra_informacion').value,
+        };
+
+        if (editingEventoId) {
+          eventoData.activo = document.getElementById('activo').checked;
+        }
+
+        const url = editingEventoId 
+          ? `${API_URL}/api/admin/eventos/${editingEventoId}`
+          : `${API_URL}/api/admin/eventos`;
+        
+        const method = editingEventoId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+          method,
+          headers: {
+            'Authorization': 'Bearer ' + accessToken,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(eventoData),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message);
+
+        showMessage(`Evento ${editingEventoId ? 'actualizado' : 'creado'} exitosamente`, 'success');
+        modal.style.display = 'none';
+        loadEventos();
+      } catch (error) {
+        showMessage('Error al guardar evento: ' + error.message, 'error');
+      }
+    };
+
+    // Cerrar modal
+    document.getElementById('btnCerrarModal').onclick = () => {
+      modal.style.display = 'none';
+    };
+
+    document.getElementById('btnCancelar').onclick = () => {
+      modal.style.display = 'none';
+    };
+
+    // Tabs
+    document.getElementById('tabActivos').onclick = () => {
+      currentTab = 'activos';
+      document.getElementById('tabActivos').classList.add('active');
+      document.getElementById('tabActivos').style.borderBottomColor = '#667eea';
+      document.getElementById('tabActivos').style.color = '#667eea';
+      document.getElementById('tabPasados').classList.remove('active');
+      document.getElementById('tabPasados').style.borderBottomColor = 'transparent';
+      document.getElementById('tabPasados').style.color = '#6b7280';
+      loadEventos();
+    };
+
+    document.getElementById('tabPasados').onclick = () => {
+      currentTab = 'pasados';
+      document.getElementById('tabPasados').classList.add('active');
+      document.getElementById('tabPasados').style.borderBottomColor = '#667eea';
+      document.getElementById('tabPasados').style.color = '#667eea';
+      document.getElementById('tabActivos').classList.remove('active');
+      document.getElementById('tabActivos').style.borderBottomColor = 'transparent';
+      document.getElementById('tabActivos').style.color = '#6b7280';
+      loadEventos();
+    };
+
+    // Mostrar mensajes
+    function showMessage(text, type) {
+      messageEl.textContent = text;
+      messageEl.className = type;
+      messageEl.style.display = 'block';
+      messageEl.style.backgroundColor = type === 'success' ? '#d1fae5' : '#fee2e2';
+      messageEl.style.color = type === 'success' ? '#065f46' : '#991b1b';
+      setTimeout(() => { messageEl.style.display = 'none'; }, 5000);
+    }
+
+    // Cargar eventos iniciales
+    loadEventos();
+  </script>
+
+  <style>
+    .tab.active {
+      border-bottom-color: #667eea !important;
+      color: #667eea !important;
+    }
+  </style>
+</Layout>

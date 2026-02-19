@@ -5,24 +5,36 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 ---
 
 <Layout title="Panel de Administrador">
-  <div style="max-width: 1200px; margin: 2rem auto;">
+  <div style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem;">
     <h2>Panel de Administrador</h2>
 
     <div style="margin-bottom: 1rem;">
-      <button onclick="logout()" style="background-color: var(--color-danger);">Cerrar Sesión</button>
+      <button onclick="window.logout()" style="background-color: var(--color-danger);">Cerrar Sesión</button>
     </div>
 
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 2rem;">
       <div style="background: white; padding: 1.5rem; border-radius: 0.5rem;">
         <h3>Eventos</h3>
         <div id="eventosCount" style="font-size: 2rem; color: var(--color-primary);">-</div>
-        <button onclick="loadSection('eventos')">Gestionar Eventos</button>
+        <button onclick="window.showSection('eventos')" style="width: 100%; padding: 0.75rem; background-color: var(--color-primary); color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Ver Eventos</button>
       </div>
 
       <div style="background: white; padding: 1.5rem; border-radius: 0.5rem;">
         <h3>Usuarios</h3>
         <div id="usuariosCount" style="font-size: 2rem; color: var(--color-primary);">-</div>
-        <button onclick="loadSection('usuarios')">Gestionar Usuarios</button>
+        <button onclick="window.showSection('usuarios')" style="width: 100%; padding: 0.75rem; background-color: var(--color-primary); color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Ver Usuarios</button>
+      </div>
+
+      <div style="background: white; padding: 1.5rem; border-radius: 0.5rem;">
+        <h3>Enlaces de Registro</h3>
+        <div id="linksCount" style="font-size: 2rem; color: var(--color-primary);">-</div>
+        <button onclick="window.showSection('links')" style="width: 100%; padding: 0.75rem; background-color: var(--color-primary); color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Ver Enlaces</button>
+      </div>
+
+      <div style="background: white; padding: 1.5rem; border-radius: 0.5rem;">
+        <h3>Jóvenes</h3>
+        <div id="jovenesCount" style="font-size: 2rem; color: var(--color-primary);">-</div>
+        <button onclick="window.showSection('jovenes')" style="width: 100%; padding: 0.75rem; background-color: var(--color-primary); color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Ver Jóvenes</button>
       </div>
     </div>
 
@@ -30,81 +42,93 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
     <div id="message"></div>
   </div>
 
-  <script define:vars={{ API_URL }}>
-    const accessToken = localStorage.getItem('accessToken');
-    const messageEl = document.getElementById('message');
+  <script>
+    // Hacer funciones globales
+    const API_URL = 'http://localhost:3001';
+    window.accessToken = localStorage.getItem('accessToken');
+    window.messageEl = document.getElementById('message');
 
-    if (!accessToken) {
+    if (!window.accessToken) {
       window.location.href = '/login';
     }
 
-    async function loadEventos() {
+    window.copyToClipboard = function(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        window.messageEl.className = 'success';
+        window.messageEl.textContent = '✓ Enlace copiado al portapapeles';
+        setTimeout(() => { window.messageEl.textContent = ''; }, 3000);
+      }).catch(err => {
+        window.messageEl.className = 'error';
+        window.messageEl.textContent = 'Error al copiar: ' + err.message;
+      });
+    };
+
+    window.logout = function() {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      window.location.href = '/';
+    };
+
+    window.loadEventos = async function() {
       try {
         const response = await fetch(`${API_URL}/api/admin/eventos`, {
-          headers: {
-            'Authorization': 'Bearer ' + accessToken,
-          },
+          headers: { 'Authorization': 'Bearer ' + window.accessToken }
         });
-
         const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error?.message || 'Error al cargar eventos');
-        }
-
+        
+        if (!response.ok) throw new Error(data.error?.message || 'Error al cargar eventos');
+        
         document.getElementById('eventosCount').textContent = data.total;
-
         const content = document.getElementById('sectionContent');
         content.innerHTML = '<h3>Eventos</h3>';
-
-        const table = document.createElement('table');
-        table.style.cssText = 'width: 100%; border-collapse: collapse; margin-top: 1rem;';
-        table.innerHTML = `
-          <thead>
-            <tr style="background-color: var(--color-gray-light);">
-              <th style="padding: 0.75rem; text-align: left;">Nombre</th>
-              <th style="padding: 0.75rem; text-align: left;">Tipo</th>
-              <th style="padding: 0.75rem; text-align: left;">Precio</th>
-              <th style="padding: 0.75rem; text-align: left;">Activo</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.data.map(e => `
-              <tr style="border-bottom: 1px solid #d1d5db;">
-                <td style="padding: 0.75rem;">${e.nombre}</td>
-                <td style="padding: 0.75rem;">${e.tipo}</td>
-                <td style="padding: 0.75rem;">€${e.precio_base || '-'}</td>
-                <td style="padding: 0.75rem;">${e.activo ? 'Sí' : 'No'}</td>
+        
+        if (data.total === 0) {
+          content.innerHTML += '<p>No hay eventos registrados</p>';
+        } else {
+          const table = document.createElement('table');
+          table.style.cssText = 'width: 100%; border-collapse: collapse; margin-top: 1rem;';
+          table.innerHTML = `
+            <thead>
+              <tr style="background-color: var(--color-gray-light);">
+                <th style="padding: 0.75rem; text-align: left;">Nombre</th>
+                <th style="padding: 0.75rem; text-align: left;">Tipo</th>
+                <th style="padding: 0.75rem; text-align: left;">Precio</th>
+                <th style="padding: 0.75rem; text-align: left;">Activo</th>
               </tr>
-            `).join('')}
-          </tbody>
-        `;
-        content.appendChild(table);
+            </thead>
+            <tbody>
+              ${data.data.map(e => `
+                <tr style="border-bottom: 1px solid #d1d5db;">
+                  <td style="padding: 0.75rem;">${e.nombre}</td>
+                  <td style="padding: 0.75rem;">${e.tipo}</td>
+                  <td style="padding: 0.75rem;">€${e.precio_base || '-'}</td>
+                  <td style="padding: 0.75rem;">${e.activo ? 'Sí' : 'No'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          `;
+          content.appendChild(table);
+        }
       } catch (error) {
-        messageEl.className = 'error';
-        messageEl.textContent = 'Error: ' + error.message;
+        window.messageEl.className = 'error';
+        window.messageEl.textContent = 'Error: ' + error.message;
       }
-    }
+    };
 
-    async function loadUsuarios() {
+    window.loadUsuarios = async function() {
       try {
         const response = await fetch(`${API_URL}/api/admin/usuarios`, {
-          headers: {
-            'Authorization': 'Bearer ' + accessToken,
-          },
+          headers: { 'Authorization': 'Bearer ' + window.accessToken }
         });
-
         const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error?.message || 'Error al cargar usuarios');
-        }
-
+        
+        if (!response.ok) throw new Error(data.error?.message || 'Error al cargar usuarios');
+        
         document.getElementById('usuariosCount').textContent = data.total;
-
         const content = document.getElementById('sectionContent');
         content.innerHTML = '<h3>Usuarios</h3>';
-
+        
         const table = document.createElement('table');
         table.style.cssText = 'width: 100%; border-collapse: collapse; margin-top: 1rem;';
         table.innerHTML = `
@@ -129,29 +153,102 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
         `;
         content.appendChild(table);
       } catch (error) {
-        messageEl.className = 'error';
-        messageEl.textContent = 'Error: ' + error.message;
+        window.messageEl.className = 'error';
+        window.messageEl.textContent = 'Error: ' + error.message;
       }
-    }
+    };
 
-    function loadSection(section) {
-      messageEl.innerHTML = '';
-      if (section === 'eventos') {
-        loadEventos();
-      } else if (section === 'usuarios') {
-        loadUsuarios();
+    window.loadRegistrationLinks = async function() {
+      try {
+        const response = await fetch(`${API_URL}/api/admin/registration-links`, {
+          headers: { 'Authorization': 'Bearer ' + window.accessToken }
+        });
+        const data = await response.json();
+        
+        if (!response.ok) throw new Error(data.error?.message || 'Error al cargar enlaces');
+        
+        document.getElementById('linksCount').textContent = data.total;
+        const content = document.getElementById('sectionContent');
+        content.innerHTML = '<h3>Enlaces de Registro</h3>';
+        
+        data.data.forEach(link => {
+          const div = document.createElement('div');
+          div.style.cssText = 'background: #f0f9ff; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; border-left: 4px solid #3b82f6;';
+          div.innerHTML = `
+            <p style="margin: 0 0 0.25rem 0;"><strong>${link.evento_nombre}</strong></p>
+            <p style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: #666;">Monitor: ${link.monitor_nombre}</p>
+            <input type="text" value="${link.url}" readonly style="width: 100%; padding: 0.5rem; font-size: 0.85rem; margin-bottom: 0.5rem; font-family: monospace;" />
+            <button onclick="window.copyToClipboard('${link.url}')" style="background-color: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer;">Copiar</button>
+          `;
+          content.appendChild(div);
+        });
+      } catch (error) {
+        window.messageEl.className = 'error';
+        window.messageEl.textContent = 'Error: ' + error.message;
       }
-    }
+    };
 
-    function logout() {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      window.location.href = '/';
-    }
+    window.loadJovenes = async function() {
+      try {
+        // Obtener todos los jóvenes
+        const response = await fetch(`${API_URL}/api/admin/jovenes`, {
+          headers: { 'Authorization': 'Bearer ' + window.accessToken }
+        });
+        const data = await response.json();
+        
+        if (!response.ok) throw new Error(data.error?.message || 'Error al cargar jóvenes');
+        
+        document.getElementById('jovenesCount').textContent = data.total;
+        const content = document.getElementById('sectionContent');
+        content.innerHTML = '<h3>Jóvenes Registrados</h3>';
+        
+        if (data.total === 0) {
+          content.innerHTML += '<p>No hay jóvenes registrados</p>';
+        } else {
+          const table = document.createElement('table');
+          table.style.cssText = 'width: 100%; border-collapse: collapse; margin-top: 1rem;';
+          table.innerHTML = `
+            <thead>
+              <tr style="background-color: var(--color-gray-light);">
+                <th style="padding: 0.75rem; text-align: left;">Nombre</th>
+                <th style="padding: 0.75rem; text-align: left;">Monitor</th>
+                <th style="padding: 0.75rem; text-align: left;">Evento</th>
+                <th style="padding: 0.75rem; text-align: left;">Docs</th>
+                <th style="padding: 0.75rem; text-align: left;">Pagos</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.data.map(j => `
+                <tr style="border-bottom: 1px solid #d1d5db;">
+                  <td style="padding: 0.75rem;">${j.nombre} ${j.apellidos}</td>
+                  <td style="padding: 0.75rem;">${j.monitor_nombre}</td>
+                  <td style="padding: 0.75rem;">${j.evento_nombre}</td>
+                  <td style="padding: 0.75rem;">${j.documentos_count}</td>
+                  <td style="padding: 0.75rem;">${j.pagos_count}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          `;
+          content.appendChild(table);
+        }
+      } catch (error) {
+        window.messageEl.className = 'error';
+        window.messageEl.textContent = 'Error: ' + error.message;
+      }
+    };
+
+    window.showSection = function(section) {
+      window.messageEl.innerHTML = '';
+      if (section === 'eventos') window.loadEventos();
+      else if (section === 'usuarios') window.loadUsuarios();
+      else if (section === 'links') window.loadRegistrationLinks();
+      else if (section === 'jovenes') window.loadJovenes();
+    };
 
     // Cargar datos iniciales
-    loadEventos();
-    loadUsuarios();
+    window.loadEventos();
+    window.loadUsuarios();
+    window.loadRegistrationLinks();
+    window.loadJovenes();
   </script>
 </Layout>

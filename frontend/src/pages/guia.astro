@@ -1,0 +1,55 @@
+---
+import Layout from "../layouts/Layout.astro";
+import GuiaUso from "../components/GuiaUso.astro";
+---
+
+<Layout title="Guia de Uso">
+  <div style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+      <h2 style="margin: 0;">Guia de Uso</h2>
+      <a href="/" style="text-decoration: none; color: #667eea; font-weight: 600;">Volver al inicio</a>
+    </div>
+
+    <div style="display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 2px solid #e5e7eb;">
+      <button id="tabAdmin" style="padding: 0.75rem 1.5rem; background: none; border: none; cursor: pointer; font-weight: 600; border-bottom: 3px solid #667eea; color: #667eea;">
+        Administrador
+      </button>
+      <button id="tabMonitor" style="padding: 0.75rem 1.5rem; background: none; border: none; cursor: pointer; font-weight: 600; border-bottom: 3px solid transparent; color: #6b7280;">
+        Monitor
+      </button>
+    </div>
+
+    <div id="contentAdmin">
+      <GuiaUso tipo="admin" />
+    </div>
+
+    <div id="contentMonitor" style="display: none;">
+      <GuiaUso tipo="monitor" />
+    </div>
+  </div>
+
+  <script>
+    const tabAdmin = document.getElementById('tabAdmin');
+    const tabMonitor = document.getElementById('tabMonitor');
+    const contentAdmin = document.getElementById('contentAdmin');
+    const contentMonitor = document.getElementById('contentMonitor');
+
+    tabAdmin.onclick = () => {
+      tabAdmin.style.borderBottomColor = '#667eea';
+      tabAdmin.style.color = '#667eea';
+      tabMonitor.style.borderBottomColor = 'transparent';
+      tabMonitor.style.color = '#6b7280';
+      contentAdmin.style.display = 'block';
+      contentMonitor.style.display = 'none';
+    };
+
+    tabMonitor.onclick = () => {
+      tabMonitor.style.borderBottomColor = '#667eea';
+      tabMonitor.style.color = '#667eea';
+      tabAdmin.style.borderBottomColor = 'transparent';
+      tabAdmin.style.color = '#6b7280';
+      contentAdmin.style.display = 'none';
+      contentMonitor.style.display = 'block';
+    };
+  </script>
+</Layout>

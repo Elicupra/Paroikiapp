@@ -8,6 +8,9 @@ const monitorController = require('../controllers/monitorController');
 router.use(authMiddleware);
 router.use(requireRole(['monitor']));
 
+// GET /api/monitor/registration-link
+router.get('/registration-link', monitorController.getRegistrationLink);
+
 // GET /api/monitor/jovenes
 router.get('/jovenes', monitorController.getJovenes);
 

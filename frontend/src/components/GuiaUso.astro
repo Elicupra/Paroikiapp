@@ -1,0 +1,134 @@
+---
+const { tipo } = Astro.props; // 'admin' o 'monitor'
+---
+
+<div style="background: #f0f9ff; border-left: 4px solid #3b82f6; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 2rem;">
+  <h3 style="margin: 0 0 1rem 0; color: #1e40af; display: flex; align-items: center; gap: 0.5rem;">
+    <span style="font-size: 1.5rem;">📖</span> Guía de Uso
+  </h3>
+
+  {tipo === 'admin' ? (
+    <div style="display: grid; gap: 1.5rem;">
+      <div>
+        <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">🎯 Panel de Administrador</h4>
+        <p style="margin: 0; color: #4b5563; line-height: 1.6;">
+          Como administrador, tienes acceso completo a todas las funcionalidades de la aplicación. 
+          Puedes gestionar eventos, usuarios, y supervisar el trabajo de los monitores.
+        </p>
+      </div>
+
+      <div>
+        <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">📅 Gestión de Eventos</h4>
+        <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem; color: #4b5563; line-height: 1.8;">
+          <li><strong>Crear eventos:</strong> Haz clic en "Eventos" en el menú, luego en "+ Nuevo Evento". Completa todos los datos del evento: nombre, tipo (campamento, peregrinación, viaje), fechas, precio, localización y descripción.</li>
+          <li><strong>Editar eventos:</strong> En la lista de eventos, haz clic en "Editar" para modificar cualquier información.</li>
+          <li><strong>Desactivar eventos:</strong> Cuando un evento finaliza, púedes desactivarlo haciendo clic en "Desactivar". Los datos se conservan pero el evento deja de aparecer como activo.</li>
+          <li><strong>Eventos pasados:</strong> Usa la pestaña "Eventos Pasados" para consultar el historial completo.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">👥 Gestión de Usuarios</h4>
+        <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem; color: #4b5563; line-height: 1.8;">
+          <li><strong>Crear monitores:</strong> Ve a "Usuarios" y crea nuevas cuentas para los monitores que ayudarán en los eventos.</li>
+          <li><strong>Asignar eventos:</strong> Asigna cada monitor a uno o varios eventos. El monitor solo verá información de los eventos asignados.</li>
+          <li><strong>Enlaces de registro:</strong> Cada monitor tiene un enlace único que comparte con las familias para que inscriban a sus jóvenes.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">🔍 Supervisión de Monitores</h4>
+        <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem; color: #4b5563; line-height: 1.8;">
+          <li><strong>Ver como monitor:</strong> Puedes "simular" ser un monitor específico para ver exactamente lo que él ve y ayudarle si tiene dudas.</li>
+          <li><strong>Panel Monitor:</strong> Accede al "Panel Monitor" para tener una vista similar a la de los monitores.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">📊 Informes y Estadísticas</h4>
+        <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem; color: #4b5563; line-height: 1.8;">
+          <li><strong>Vista general:</strong> En este panel puedes ver estadísticas de todos los eventos: número de inscritos, pagos recibidos, documentos pendientes.</li>
+          <li><strong>Por evento:</strong> Consulta los jóvenes inscritos en cada evento específico.</li>
+        </ul>
+      </div>
+
+      <div style="background: white; padding: 1rem; border-radius: 0.5rem; border: 1px solid #bfdbfe;">
+        <p style="margin: 0; color: #1f2937; font-weight: 600;">💡 Consejo:</p>
+        <p style="margin: 0.5rem 0 0 0; color: #4b5563;">
+          Mantén actualizados los datos de los eventos y revisa regularmente el progreso de las inscripciones. 
+          Comunícate frecuentemente con tus monitores para resolver dudas y asegurar que todo va bien.
+        </p>
+      </div>
+    </div>
+  ) : (
+    <div style="display: grid; gap: 1.5rem;">
+      <div>
+        <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">👋 Bienvenido, Monitor</h4>
+        <p style="margin: 0; color: #4b5563; line-height: 1.6;">
+          Como monitor, tu trabajo es gestionar las inscripciones de los jóvenes para los eventos asignados. 
+          Aquí puedes compartir enlaces de registro, revisar inscripciones, y registrar pagos.
+        </p>
+      </div>
+
+      <div>
+        <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">🔗 Tu Enlace de Registro</h4>
+        <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem; color: #4b5563; line-height: 1.8;">
+          <li><strong>Compartir enlace:</strong> En la sección "Enlaces de Registro" verás tu enlace único para cada evento. Cópialo y compártelo con las familias por WhatsApp, email, o redes sociales.</li>
+          <li><strong>Cómo funciona:</strong> Cuando una familia hace clic en tu enlace, puede inscribir a su joven directamente. Los datos quedan registrados bajo tu nombre como monitor responsable.</li>
+          <li><strong>Seguridad:</strong> Cada enlace es único y solo tu lo tienes. No lo compartas con otros monitores.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">👦 Jóvenes Registrados</h4>
+        <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem; color: #4b5563; line-height: 1.8;">
+          <li><strong>Ver inscritos:</strong> En "Jóvenes Registrados" verás la lista de todos los que se inscribieron usando tu enlace.</li>
+          <li><strong>Información visible:</strong> Podrás ver el nombre, apellidos, número de documentos entregados y pagos realizados.</li>
+          <li><strong>Múltiples eventos:</strong> Si estás asignado a varios eventos, primero selecciona el evento que quieres gestionar.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">💰 Registrar Pagos</h4>
+        <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem; color: #4b5563; line-height: 1.8;">
+          <li><strong>Formulario de pago:</strong> Usa el formulario "Registrar Pago" cuando un joven te entregue dinero.</li>
+          <li><strong>Seleccionar joven:</strong> Elige el nombre del joven del menú desplegable.</li>
+          <li><strong>Datos del pago:</strong> Indica el número de plazo (1, 2, 3...) y la cantidad en euros recibida.</li>
+          <li><strong>Confirmación:</strong> Al guardar, el pago queda registrado y suma al total pagado del joven.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">📄 Documentos</h4>
+        <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem; color: #4b5563; line-height: 1.8;">
+          <li><strong>Documentos requeridos:</strong> Cada joven debe entregar ciertos documentos (autorización paterna, tarjeta sanitaria, etc.).</li>
+          <li><strong>Control:</strong> Puedes ver cuántos documentos ha entregado cada joven. Si faltan documentos, contacta a la familia.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">🔄 Cambiar de Evento</h4>
+        <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem; color: #4b5563; line-height: 1.8;">
+          <li><strong>Múltiples eventos:</strong> Si gestionas varios eventos, usa el botón "Cambiar Evento" en la parte superior del panel.</li>
+          <li><strong>Vista aislada:</strong> Al cambiar, verás solo los jóvenes y datos del evento seleccionado.</li>
+        </ul>
+      </div>
+
+      <div style="background: white; padding: 1rem; border-radius: 0.5rem; border: 1px solid #bfdbfe;">
+        <p style="margin: 0; color: #1f2937; font-weight: 600;">💡 Consejo:</p>
+        <p style="margin: 0.5rem 0 0 0; color: #4b5563;">
+          Revisa regularmente la lista de inscritos y el estado de pagos. Recuerda a las familias sobre plazos 
+          de pago y documentos pendientes. ¡Tu organización ayuda al éxito del evento!
+        </p>
+      </div>
+
+      <div style="background: white; padding: 1rem; border-radius: 0.5rem; border: 1px solid #bfdbfe;">
+        <p style="margin: 0; color: #1f2937; font-weight: 600;">❓ ¿Dudas?</p>
+        <p style="margin: 0.5rem 0 0 0; color: #4b5563;">
+          Si tienes alguna pregunta o problema, contacta con el administrador de tu parroquia. 
+          Ellos pueden ayudarte y resolver cualquier incidencia.
+        </p>
+      </div>
+    </div>
+  )}
+</div>

@@ -1,0 +1,85 @@
+---
+// Navbar adaptativo según el usuario autenticado
+---
+
+<nav id="navbar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+  <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 0 1rem;">
+    <a href="/" style="color: white; text-decoration: none; font-size: 1.5rem; font-weight: bold;">
+      ⛪ ParoikiApp
+    </a>
+    
+    <div id="navLinks" style="display: flex; gap: 1.5rem; align-items: center;">
+      <!-- Se llena dinámicamente con JavaScript -->
+    </div>
+  </div>
+</nav>
+
+<script>
+  function updateNavbar() {
+    const navLinks = document.getElementById('navLinks');
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    const accessToken = localStorage.getItem('accessToken');
+    
+    if (!accessToken || !user) {
+      // Usuario no autenticado
+      navLinks.innerHTML = `
+        <a href="/" style="color: white; text-decoration: none; font-weight: 500;">Inicio</a>
+        <a href="/login" style="background: white; color: #667eea; padding: 0.5rem 1.5rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600;">Iniciar Sesión</a>
+      `;
+    } else {
+      // Usuario autenticado
+      const isAdmin = user.rol === 'organizador';
+      const isMonitor = user.rol === 'monitor';
+      
+      let links = `<a href="/" style="color: white; text-decoration: none; font-weight: 500;">Inicio</a>`;
+      links += `<a href="/guia" style="color: white; text-decoration: none; font-weight: 500;">Guia</a>`;
+      
+      if (isMonitor) {
+        links += `<a href="/monitor" style="color: white; text-decoration: none; font-weight: 500;">Mi Panel</a>`;
+      }
+      
+      if (isAdmin) {
+        links += `<a href="/admin" style="color: white; text-decoration: none; font-weight: 500;">Panel Admin</a>`;
+        links += `<a href="/eventos" style="color: white; text-decoration: none; font-weight: 500;">Eventos</a>`;
+        links += `<a href="/monitor" style="color: white; text-decoration: none; font-weight: 500;">Panel Monitor</a>`;
+        links += `<a href="/usuarios" style="color: white; text-decoration: none; font-weight: 500;">Usuarios</a>`;
+      }
+      
+      links += `
+        <span style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">${user.nombre_mostrado}</span>
+        <button onclick="logout()" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-weight: 500;">
+          Cerrar Sesión
+        </button>
+      `;
+      
+      navLinks.innerHTML = links;
+    }
+  }
+  
+  function logout() {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    window.location.href = '/';
+  }
+  
+  window.logout = logout;
+  
+  // Actualizar navbar al cargar
+  updateNavbar();
+  
+  // Actualizar cuando cambie el storage (en otras pestañas)
+  window.addEventListener('storage', updateNavbar);
+</script>
+
+<style>
+  nav a:hover {
+    opacity: 0.8;
+    transition: opacity 0.2s;
+  }
+  
+  nav button:hover {
+    background: rgba(255,255,255,0.3) !important;
+    transition: background 0.2s;
+  }
+</style>

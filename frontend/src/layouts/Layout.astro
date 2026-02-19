@@ -1,11 +1,14 @@
 ---
 // Layout principal de la aplicación
+import Navbar from '../components/Navbar.astro';
+
 interface Props {
   title: string;
   description?: string;
+  showNavbar?: boolean;
 }
 
-const { title, description = "Registro de eventos juveniles" } = Astro.props;
+const { title, description = "Registro de eventos juveniles", showNavbar = true } = Astro.props;
 ---
 
 <!doctype html>
@@ -91,14 +94,8 @@ const { title, description = "Registro de eventos juveniles" } = Astro.props;
     </style>
   </head>
   <body>
-    <nav style="background-color: var(--color-primary); color: white; padding: 1rem;">
-      <div class="container">
-        <a href="/" style="color: white; font-weight: bold; font-size: 1.5rem;">Paroikiapp</a>
-      </div>
-    </nav>
+    {showNavbar && <Navbar />}
 
-    <div class="container">
-      <slot />
-    </div>
+    <slot />
   </body>
 </html>

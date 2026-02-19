@@ -6,6 +6,9 @@ async function seed() {
   try {
     console.log('Starting seed...');
 
+    // Establecer el schema
+    await client.query('SET search_path TO paroikiapp;');
+
     // 1. Crear eventos
     const eventoResult = await client.query(`
       INSERT INTO eventos (nombre, tipo, descripcion, precio_base, fecha_inicio, fecha_fin)
