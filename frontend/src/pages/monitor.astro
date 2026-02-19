@@ -40,11 +40,16 @@ import Layout from "../layouts/Layout.astro";
         </div>
       </div>
 
+      <div id="resumenEvento" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;"></div>
+
       <h3 style="margin-top: 2rem;">Enlaces de Registro</h3>
       <div id="registrationLinks" style="margin: 1rem 0;"></div>
 
       <h3 style="margin-top: 2rem;">Jóvenes Registrados</h3>
       <div id="jovenesList" style="margin: 1rem 0;"></div>
+
+      <h3 style="margin-top: 2rem;">Documentos del joven seleccionado</h3>
+      <div id="documentosJoven" style="margin: 1rem 0;"></div>
 
       <h3 style="margin-top: 2rem;">Registrar Pago</h3>
       <form id="pagoForm" style="background: white; padding: 1.5rem; border-radius: 0.5rem; max-width: 500px;">
@@ -80,6 +85,30 @@ import Layout from "../layouts/Layout.astro";
             min="0.01"
             required 
             style="width: 100%; padding: 0.75rem; font-size: 1rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" />
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label for="descuento" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Descuento aplicado (€)</label>
+          <input
+            type="number"
+            id="descuento"
+            name="descuento"
+            step="0.01"
+            min="0"
+            value="0"
+            style="width: 100%; padding: 0.75rem; font-size: 1rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" />
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label style="display: flex; gap: 0.5rem; align-items: center; font-weight: 600; cursor: pointer;">
+            <input type="checkbox" id="es_especial" name="es_especial" />
+            Trato especial
+          </label>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label for="nota_especial" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Nota de trato especial</label>
+          <textarea id="nota_especial" name="nota_especial" rows="2" style="width: 100%; padding: 0.75rem; font-size: 1rem; border: 1px solid #d1d5db; border-radius: 0.375rem;"></textarea>
         </div>
 
         <button type="submit" style="width: 100%; padding: 0.75rem; font-size: 1rem; font-weight: 600;">Registrar Pago</button>
@@ -214,7 +243,7 @@ import Layout from "../layouts/Layout.astro";
 
         if (availableEventos.length === 0) {
           // Sin eventos asignados
-          document.getElementById('eventSelectorContainer').innerHTML = '<p style="color: red; text-align: center; padding: 2rem;">No tienes eventos asignados. Contacta con el administrador.</p>';
+          document.getElementById('eventSelectorContainer').innerHTML = '<p style="color: #6b7280; text-align: center; padding: 2rem;">No hay eventos asignados para este monitor.</p>';
           document.getElementById('eventSelectorContainer').style.display = 'block';
         } else if (availableEventos.length === 1) {
           // Solo un evento, seleccionar automáticamente
@@ -306,6 +335,7 @@ import Layout from "../layouts/Layout.astro";
       }
 
       // Cargar datos del evento seleccionado
+      loadResumenEvento();
       loadRegistrationLinks();
       loadJovenes();
     }
@@ -379,6 +409,83 @@ import Layout from "../layouts/Layout.astro";
 
     // Hacer copyToClipboard global para que funcione desde HTML
     window.copyToClipboard = copyToClipboard;
+
+    async function loadResumenEvento() {
+      if (!selectedEvento) return;
+      const container = document.getElementById('resumenEvento');
+      container.innerHTML = '<div style="padding: 1rem; background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem;">Cargando resumen...</div>';
+
+      try {
+        const response = await fetch(`${API_URL}/api/monitor/resumen?evento_id=${selectedEvento.id}`, {
+          headers: getAuthHeaders(),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || 'Error al cargar resumen');
+
+        const r = data.data;
+        container.innerHTML = `
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem;"><strong>Total pagado</strong><div style="font-size: 1.35rem; margin-top: 0.25rem;">€${Number(r.total_pagado || 0).toFixed(2)}</div></div>
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem;"><strong>Presupuesto esperado</strong><div style="font-size: 1.35rem; margin-top: 0.25rem;">€${Number(r.total_presupuesto_esperado || 0).toFixed(2)}</div></div>
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem;"><strong>Descuento aplicado</strong><div style="font-size: 1.35rem; margin-top: 0.25rem;">€${Number(r.descuento_aplicado || 0).toFixed(2)}</div></div>
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem;"><strong>Cupo jóvenes</strong><div style="font-size: 1.35rem; margin-top: 0.25rem;">${r.total_jovenes || 0}/${r.max_jovenes || 10}</div></div>
+        `;
+      } catch (error) {
+        container.innerHTML = `<div style="padding: 1rem; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; border-radius: 0.5rem;">${error.message}</div>`;
+      }
+    }
+
+    async function loadDocumentosJoven() {
+      const jovenId = document.getElementById('joven_id').value;
+      const container = document.getElementById('documentosJoven');
+      if (!jovenId) {
+        container.innerHTML = '<p style="color: #6b7280;">Selecciona un joven para revisar y validar documentos.</p>';
+        return;
+      }
+
+      container.innerHTML = '<p style="color: #6b7280;">Cargando documentos...</p>';
+      try {
+        const response = await fetch(`${API_URL}/api/monitor/jovenes/${jovenId}/documentos`, {
+          headers: getAuthHeaders(),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || 'Error al cargar documentos');
+
+        if (!data.data || data.data.length === 0) {
+          container.innerHTML = '<p style="color: #6b7280;">Este joven todavía no ha subido documentos.</p>';
+          return;
+        }
+
+        container.innerHTML = data.data.map((doc) => `
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div>
+              <div style="font-weight: 600;">${doc.nombre_original || doc.tipo}</div>
+              <div style="font-size: 0.9rem; color: #6b7280;">Tipo: ${doc.tipo} · ${doc.validado ? 'Validado' : 'Pendiente'}</div>
+            </div>
+            ${doc.validado ? '<span style="color:#065f46; background:#d1fae5; border:1px solid #a7f3d0; padding:0.25rem 0.5rem; border-radius:0.5rem;">Validado</span>' : `<button onclick="window.validarDocumento('${doc.id}')" style="background:#10b981; color:white; border:none; border-radius:0.5rem; padding:0.5rem 0.75rem; cursor:pointer;">Validar</button>`}
+          </div>
+        `).join('');
+      } catch (error) {
+        container.innerHTML = `<p style="color: #991b1b;">${error.message}</p>`;
+      }
+    }
+
+    window.validarDocumento = async function(docId) {
+      try {
+        const response = await fetch(`${API_URL}/api/monitor/documentos/${docId}/validar`, {
+          method: 'PATCH',
+          headers: getAuthHeaders(),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || 'Error al validar documento');
+
+        messageEl.className = 'success';
+        messageEl.textContent = data.mensaje || 'Documento validado';
+        loadDocumentosJoven();
+      } catch (error) {
+        messageEl.className = 'error';
+        messageEl.textContent = 'Error: ' + error.message;
+      }
+    };
 
     async function loadJovenes() {
       console.log('[JOVENES] Iniciando loadJovenes...');
@@ -472,6 +579,7 @@ import Layout from "../layouts/Layout.astro";
             });
 
             console.log('[COMPLETE] Final select options count:', selectJoven.options.length);
+            selectJoven.disabled = false;
 
             // Mensaje de éxito
             messageEl.className = 'success';
@@ -506,6 +614,9 @@ import Layout from "../layouts/Layout.astro";
       const joven_id = document.getElementById('joven_id').value;
       const plazo_numero = parseInt(document.getElementById('plazo_numero').value);
       const cantidad = parseFloat(document.getElementById('cantidad').value);
+      const descuento = parseFloat(document.getElementById('descuento').value || '0');
+      const es_especial = document.getElementById('es_especial').checked;
+      const nota_especial = document.getElementById('nota_especial').value.trim();
 
       try {
         messageEl.innerHTML = '';
@@ -513,7 +624,7 @@ import Layout from "../layouts/Layout.astro";
         const response = await fetch(`${API_URL}/api/monitor/pagos`, {
           method: 'POST',
           headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ joven_id, plazo_numero, cantidad }),
+          body: JSON.stringify({ joven_id, plazo_numero, cantidad, descuento, es_especial, nota_especial }),
         });
 
         const data = await response.json();
@@ -525,13 +636,22 @@ import Layout from "../layouts/Layout.astro";
         messageEl.className = 'success';
         messageEl.textContent = data.mensaje;
         document.getElementById('pagoForm').reset();
+        document.getElementById('descuento').value = '0';
 
         // Recargar jóvenes
-        setTimeout(() => loadJovenes(), 1000);
+        setTimeout(() => {
+          loadResumenEvento();
+          loadJovenes();
+          loadDocumentosJoven();
+        }, 500);
       } catch (error) {
         messageEl.className = 'error';
         messageEl.textContent = 'Error: ' + error.message;
       }
+    });
+
+    document.getElementById('joven_id').addEventListener('change', () => {
+      loadDocumentosJoven();
     });
 
     function logout() {

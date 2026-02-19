@@ -5,17 +5,93 @@ const { hashPassword, generateUUID } = require('../utils/crypto');
 const getEventos = async (req, res, next) => {
   try {
     const { incluir_pasados } = req.query;
-    let query = `SELECT id, nombre, tipo, descripcion, precio_base, fecha_inicio, fecha_fin, 
-                 localizacion, fotos, otra_informacion, activo, creado_en 
-                 FROM eventos`;
+    let query = `SELECT e.id, e.nombre, e.tipo, e.descripcion, e.precio_base, e.fecha_inicio, e.fecha_fin,
+                 e.localizacion, e.fotos, e.otra_informacion, e.activo, e.creado_en,
+                 COALESCE(ec.descuento_global, 0) as descuento_global,
+                 COUNT(DISTINCT j.id)::int as total_jovenes,
+                 COUNT(DISTINCT m.id)::int as total_grupos,
+                 COALESCE(SUM(CASE WHEN p.pagado = true THEN p.cantidad - COALESCE(p.descuento, 0) ELSE 0 END), 0) as total_pagado,
+                 (COALESCE(e.precio_base, 0) * GREATEST(5, COUNT(DISTINCT m.id))) - (COALESCE(ec.descuento_global, 0) * GREATEST(5, COUNT(DISTINCT m.id))) as total_esperado
+                 FROM eventos e
+                 LEFT JOIN evento_config ec ON ec.evento_id = e.id
+                 LEFT JOIN monitores m ON m.evento_id = e.id AND m.activo = true
+                 LEFT JOIN jovenes j ON j.evento_id = e.id
+                 LEFT JOIN pagos p ON p.joven_id = j.id`;
     
     if (incluir_pasados !== 'true') {
-      query += ` WHERE activo = true`;
+      query += ` WHERE e.activo = true`;
     }
     
-    query += ` ORDER BY creado_en DESC`;
+    query += ` GROUP BY e.id, ec.descuento_global ORDER BY e.creado_en DESC`;
     
     const result = await pool.query(query);
+
+    res.json({
+      data: result.rows,
+      total: result.rows.length,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/admin/eventos/:eventoId/descuento-global
+const updateEventoDescuentoGlobal = async (req, res, next) => {
+  try {
+    const { eventoId } = req.params;
+    const descuento_global = Number(req.body?.descuento_global || 0);
+
+    if (!Number.isFinite(descuento_global) || descuento_global < 0) {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_DESCUENTO',
+          message: 'descuento_global must be a non-negative number',
+        },
+      });
+    }
+
+    const exists = await pool.query('SELECT id FROM eventos WHERE id = $1', [eventoId]);
+    if (!exists.rows.length) {
+      return res.status(404).json({
+        error: {
+          code: 'EVENTO_NOT_FOUND',
+          message: 'Evento not found',
+        },
+      });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO evento_config (evento_id, descuento_global, actualizado_en)
+       VALUES ($1, $2, now())
+       ON CONFLICT (evento_id)
+       DO UPDATE SET descuento_global = $2, actualizado_en = now()
+       RETURNING evento_id, descuento_global, actualizado_en`,
+      [eventoId, descuento_global]
+    );
+
+    res.json({
+      mensaje: 'Descuento global actualizado',
+      data: result.rows[0],
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/admin/usuarios/:usuarioId/jovenes
+const getUsuarioJovenes = async (req, res, next) => {
+  try {
+    const { usuarioId } = req.params;
+
+    const result = await pool.query(
+      `SELECT j.id, j.nombre, j.apellidos, j.evento_id, e.nombre as evento_nombre, j.creado_en
+       FROM jovenes j
+       JOIN monitores m ON m.id = j.monitor_id
+       JOIN eventos e ON e.id = j.evento_id
+       WHERE m.usuario_id = $1
+       ORDER BY j.creado_en DESC`,
+      [usuarioId]
+    );
 
     res.json({
       data: result.rows,
@@ -185,7 +261,15 @@ const getEventoJovenes = async (req, res, next) => {
 const getUsuarios = async (req, res, next) => {
   try {
     const result = await pool.query(
-      'SELECT id, email, nombre_mostrado, rol, activo, ultimo_login, creado_en FROM usuarios ORDER BY creado_en DESC'
+      `SELECT u.id, u.email, u.nombre_mostrado, u.rol, u.activo, u.ultimo_login, u.creado_en,
+              COALESCE((
+                SELECT COUNT(*)
+                FROM jovenes j
+                JOIN monitores m ON m.id = j.monitor_id
+                WHERE m.usuario_id = u.id
+              ), 0)::int as jovenes_count
+       FROM usuarios u
+       ORDER BY u.creado_en DESC`
     );
 
     res.json({
@@ -608,12 +692,14 @@ module.exports = {
   getEvento,
   updateEvento,
   deleteEvento,
+  updateEventoDescuentoGlobal,
   getEventoJovenes,
   getUsuarios,
   createUsuario,
   getUsuario,
   updateUsuario,
   deleteUsuario,
+  getUsuarioJovenes,
   toggleUsuarioActivo,
   getUsuarioEventos,
   assignMonitorEvento,

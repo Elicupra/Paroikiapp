@@ -10,10 +10,12 @@ const getDocument = async (req, res, next) => {
 
     // Obtener documento y verificar permisos
     const docResult = await pool.query(
-      `SELECT d.id, d.ruta_interna, d.nombre_original, d.mime_type, j.monitor_id, m.usuario_id
+      `SELECT d.id, d.ruta_interna, d.nombre_original, d.mime_type, j.monitor_id, m.usuario_id,
+              COALESCE(v.validado, false) as validado
        FROM documentos d
        JOIN jovenes j ON d.joven_id = j.id
        JOIN monitores m ON j.monitor_id = m.id
+       LEFT JOIN documento_validaciones v ON v.documento_id = d.id
        WHERE d.id = $1`,
       [docId]
     );
@@ -35,6 +37,16 @@ const getDocument = async (req, res, next) => {
         error: {
           code: 'FORBIDDEN',
           message: 'You do not have permission to access this document',
+        },
+      });
+    }
+
+    // Los organizadores solo pueden descargar documentos validados
+    if (req.user.rol === 'organizador' && !doc.validado) {
+      return res.status(403).json({
+        error: {
+          code: 'DOCUMENT_NOT_VALIDATED',
+          message: 'Solo se pueden descargar documentos validados',
         },
       });
     }

@@ -80,6 +80,15 @@ const validatePago = [
     .isDecimal({ decimal_digits: '1,2' })
     .custom(val => parseFloat(val) > 0)
     .withMessage('Amount must be greater than 0'),
+  body('descuento')
+    .optional()
+    .isDecimal({ decimal_digits: '0,2' })
+    .custom(val => parseFloat(val) >= 0)
+    .withMessage('Discount must be zero or greater'),
+  body('es_especial')
+    .optional()
+    .isBoolean()
+    .withMessage('es_especial must be boolean'),
   validate,
 ];
 

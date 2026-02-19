@@ -21,11 +21,15 @@
     const user = JSON.parse(localStorage.getItem('user') || 'null');
     const accessToken = localStorage.getItem('accessToken');
     
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    const themeText = currentTheme === 'dark' ? 'Modo Claro' : 'Modo Oscuro';
+
     if (!accessToken || !user) {
       // Usuario no autenticado
       navLinks.innerHTML = `
         <a href="/" style="color: white; text-decoration: none; font-weight: 500;">Inicio</a>
         <a href="/info-app" style="color: white; text-decoration: none; font-weight: 500;">Info App</a>
+        <button onclick="toggleTheme()" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-weight: 500;">${themeText}</button>
         <a href="/login" style="background: white; color: #667eea; padding: 0.5rem 1.5rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600;">Iniciar Sesión</a>
       `;
     } else {
@@ -49,6 +53,9 @@
       }
       
       links += `
+        <button onclick="toggleTheme()" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-weight: 500;">
+          ${themeText}
+        </button>
         <span style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">${user.nombre_mostrado}</span>
         <button onclick="logout()" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-weight: 500;">
           Cerrar Sesión
@@ -65,8 +72,17 @@
     localStorage.removeItem('user');
     window.location.href = '/';
   }
+
+  function toggleTheme() {
+    const current = localStorage.getItem('theme') || 'light';
+    const next = current === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('theme', next);
+    document.documentElement.setAttribute('data-theme', next);
+    updateNavbar();
+  }
   
   window.logout = logout;
+  window.toggleTheme = toggleTheme;
   
   // Actualizar navbar al cargar
   updateNavbar();

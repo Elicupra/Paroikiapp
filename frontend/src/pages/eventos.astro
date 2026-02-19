@@ -118,7 +118,7 @@ import Layout from '../layouts/Layout.astro';
           </div>
 
           <div style="display: flex; gap: 1rem; margin-top: 2rem; justify-content: flex-end;">
-            <button type="button" id="btnCancelar" style="padding: 0.75rem 1.5rem; border: 1px solid #d1d5db; background: white; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">
+            <button type="button" id="btnCancelar" style="padding: 0.75rem 1.5rem; border: 1px solid #d1d5db; background: white; color: #374151; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">
               Cancelar
             </button>
             <button type="submit" style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">
@@ -229,6 +229,10 @@ import Layout from '../layouts/Layout.astro';
               <div style="display: grid; gap: 0.5rem; font-size: 0.9rem;">
                 ${evento.localizacion ? `<p style="margin: 0; color: #374151;"><strong>📍 Localización:</strong> ${evento.localizacion}</p>` : ''}
                 <p style="margin: 0; color: #374151;"><strong>💰 Precio:</strong> ${precio}</p>
+                <p style="margin: 0; color: #374151;"><strong>📊 Esperado:</strong> €${parseFloat(evento.total_esperado || 0).toFixed(2)}</p>
+                <p style="margin: 0; color: #374151;"><strong>✅ Pagado:</strong> €${parseFloat(evento.total_pagado || 0).toFixed(2)}</p>
+                <p style="margin: 0; color: #374151;"><strong>🎯 Grupos estimados:</strong> ${Math.max(5, Number(evento.total_grupos || 0))}</p>
+                <p style="margin: 0; color: #374151;"><strong>🏷️ Descuento global:</strong> €${parseFloat(evento.descuento_global || 0).toFixed(2)}</p>
                 <p style="margin: 0; color: #374151;"><strong>📅 Inicio:</strong> ${fechaInicio}</p>
                 <p style="margin: 0; color: #374151;"><strong>📅 Fin:</strong> ${fechaFin}</p>
                 ${evento.fotos && evento.fotos.length > 0 ? `<p style="margin: 0; color: #374151;"><strong>📷 Fotos:</strong> ${evento.fotos.length}</p>` : ''}
@@ -237,6 +241,9 @@ import Layout from '../layouts/Layout.astro';
               <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
                 <button onclick="editEvento('${evento.id}')" style="flex: 1; padding: 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;">
                   Editar
+                </button>
+                <button onclick="setDescuentoGlobal('${evento.id}', ${Number(evento.descuento_global || 0)})" style="flex: 1; padding: 0.5rem; background: #8b5cf6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;">
+                  Descuento
                 </button>
                 ${evento.activo ? `
                   <button onclick="deleteEvento('${evento.id}')" style="flex: 1; padding: 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;">
@@ -314,6 +321,34 @@ import Layout from '../layouts/Layout.astro';
         loadEventos();
       } catch (error) {
         showMessage('Error al desactivar evento: ' + error.message, 'error');
+      }
+    };
+
+    window.setDescuentoGlobal = async (eventoId, currentValue) => {
+      const raw = prompt('Indica el descuento global por grupo para este evento (€):', String(currentValue || 0));
+      if (raw === null) return;
+      const descuento_global = Number(raw);
+      if (!Number.isFinite(descuento_global) || descuento_global < 0) {
+        showMessage('El descuento debe ser un número mayor o igual a 0', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/admin/eventos/${eventoId}/descuento-global`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': 'Bearer ' + accessToken,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ descuento_global }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || 'Error actualizando descuento');
+
+        showMessage('Descuento global actualizado', 'success');
+        loadEventos();
+      } catch (error) {
+        showMessage('Error al actualizar descuento: ' + error.message, 'error');
       }
     };
 

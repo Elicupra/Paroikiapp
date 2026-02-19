@@ -22,6 +22,9 @@ router.get('/eventos/:eventoId', adminController.getEvento);
 // PUT /api/admin/eventos/:eventoId
 router.put('/eventos/:eventoId', adminController.updateEvento);
 
+// PATCH /api/admin/eventos/:eventoId/descuento-global
+router.patch('/eventos/:eventoId/descuento-global', adminController.updateEventoDescuentoGlobal);
+
 // DELETE /api/admin/eventos/:eventoId
 router.delete('/eventos/:eventoId', adminController.deleteEvento);
 
@@ -48,6 +51,9 @@ router.patch('/usuarios/:usuarioId/toggle-active', adminController.toggleUsuario
 
 // GET /api/admin/usuarios/:usuarioId/eventos
 router.get('/usuarios/:usuarioId/eventos', adminController.getUsuarioEventos);
+
+// GET /api/admin/usuarios/:usuarioId/jovenes
+router.get('/usuarios/:usuarioId/jovenes', adminController.getUsuarioJovenes);
 
 // POST /api/admin/monitores
 router.post('/monitores', adminController.assignMonitorEvento);

@@ -82,7 +82,7 @@ import Layout from '../layouts/Layout.astro';
           </div>
 
           <div style="display: flex; gap: 1rem; margin-top: 2rem; justify-content: flex-end;">
-            <button type="button" id="btnCancelarUsuario" style="padding: 0.75rem 1.5rem; border: 1px solid #d1d5db; background: white; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">Cancelar</button>
+            <button type="button" id="btnCancelarUsuario" style="padding: 0.75rem 1.5rem; border: 1px solid #d1d5db; background: white; color: #374151; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">Cancelar</button>
             <button type="submit" style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">Guardar</button>
           </div>
         </form>
@@ -209,6 +209,7 @@ import Layout from '../layouts/Layout.astro';
               <th style="padding: 1rem; text-align: left;">Nombre</th>
               <th style="padding: 1rem; text-align: left;">Email</th>
               <th style="padding: 1rem; text-align: left;">Rol</th>
+              <th style="padding: 1rem; text-align: left;">Jóvenes</th>
               <th style="padding: 1rem; text-align: left;">Estado</th>
               <th style="padding: 1rem; text-align: left;">Acciones</th>
             </tr>
@@ -219,6 +220,7 @@ import Layout from '../layouts/Layout.astro';
                 <td style="padding: 1rem;">${u.nombre_mostrado}</td>
                 <td style="padding: 1rem;">${u.email}</td>
                 <td style="padding: 1rem; text-transform: capitalize;">${u.rol}</td>
+                <td style="padding: 1rem;">${u.rol === 'monitor' ? (u.jovenes_count || 0) : '-'}</td>
                 <td style="padding: 1rem;">
                   <span style="padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.875rem; background: ${u.activo ? '#d1fae5' : '#fee2e2'}; color: ${u.activo ? '#065f46' : '#991b1b'};">
                     ${u.activo ? 'Activo' : 'Inactivo'}

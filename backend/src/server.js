@@ -3,6 +3,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 require('dotenv').config();
 const pool = require('./models/db');
+const { ensureAdvancedSchema } = require('./models/advancedSchema');
+const { startDocumentRetentionJob } = require('./models/documentRetention');
 
 // Import routes
 const publicRoutes = require('./routes/public');
@@ -92,6 +94,13 @@ pool.query('SELECT NOW()', (err, res) => {
   } else {
     console.log('✓ Database connected at', res.rows[0].now);
   }
+});
+
+ensureAdvancedSchema().then(() => {
+  console.log('✓ Advanced schema ready');
+  startDocumentRetentionJob();
+}).catch((err) => {
+  console.error('Advanced schema error:', err.message);
 });
 
 const PORT = process.env.API_PORT || 3001;

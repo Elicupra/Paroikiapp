@@ -2,6 +2,13 @@ const express = require('express');
 const router = express.Router();
 const registerController = require('../controllers/registerController');
 const { validateJoven } = require('../middleware/validators');
+const { uploadJovenDocumento } = require('../middleware/upload');
+
+// GET /register/acceso/:accessToken
+router.get('/acceso/:accessToken', registerController.getJovenAccessInfo);
+
+// POST /register/acceso/:accessToken/documento
+router.post('/acceso/:accessToken/documento', uploadJovenDocumento.single('archivo'), registerController.uploadDocumentByAccess);
 
 // GET /register/:token
 router.get('/:token', registerController.getEventoInfo);
@@ -10,6 +17,6 @@ router.get('/:token', registerController.getEventoInfo);
 router.post('/:token/joven', validateJoven, registerController.registerJoven);
 
 // POST /register/:token/joven/:jovenId/documento
-// Este endpoint se implementará con multer en un paso posterior
+router.post('/:token/joven/:jovenId/documento', uploadJovenDocumento.single('archivo'), registerController.uploadDocument);
 
 module.exports = router;
