@@ -1,9 +1,11 @@
 const pool = require('../models/db');
 
+const getEffectiveUserId = (req) => req.user.simulatedUserId || req.user.userId;
+
 // GET /api/monitor/jovenes - Listar jóvenes del monitor
 const getJovenes = async (req, res, next) => {
   try {
-    const userId = req.user.userId;
+    const userId = getEffectiveUserId(req);
 
     // Obtener el monitor asociado al usuario
     const monitorResult = await pool.query(
@@ -50,7 +52,7 @@ const getJovenes = async (req, res, next) => {
 // GET /api/monitor/jovenes/:jovenId - Detalle de un joven
 const getJovenDetalle = async (req, res, next) => {
   try {
-    const userId = req.user.userId;
+    const userId = getEffectiveUserId(req);
     const { jovenId } = req.params;
 
     // Verificar que el joven pertenece al monitor actual
@@ -114,7 +116,7 @@ const getJovenDetalle = async (req, res, next) => {
 // POST /api/monitor/pagos - Registrar pago
 const createPago = async (req, res, next) => {
   try {
-    const userId = req.user.userId;
+    const userId = getEffectiveUserId(req);
     const { joven_id, plazo_numero, cantidad, es_especial = false, nota_especial } = req.body;
 
     // Verificar que el joven pertenece al monitor actual
@@ -163,7 +165,7 @@ const createPago = async (req, res, next) => {
 // PATCH /api/monitor/pagos/:pagoId - Actualizar pago
 const updatePago = async (req, res, next) => {
   try {
-    const userId = req.user.userId;
+    const userId = getEffectiveUserId(req);
     const { pagoId } = req.params;
     const { pagado, descuento } = req.body;
 
@@ -201,7 +203,7 @@ const updatePago = async (req, res, next) => {
 // GET /api/monitor/registration-link - Obtener enlace de registro del monitor
 const getRegistrationLink = async (req, res, next) => {
   try {
-    const userId = req.user.userId;
+    const userId = getEffectiveUserId(req);
 
     // Obtener los monitores asociados al usuario
     const monitorResult = await pool.query(

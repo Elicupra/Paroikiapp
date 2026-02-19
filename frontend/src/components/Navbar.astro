@@ -15,6 +15,7 @@
 </nav>
 
 <script>
+  // @ts-nocheck
   function updateNavbar() {
     const navLinks = document.getElementById('navLinks');
     const user = JSON.parse(localStorage.getItem('user') || 'null');
@@ -24,6 +25,7 @@
       // Usuario no autenticado
       navLinks.innerHTML = `
         <a href="/" style="color: white; text-decoration: none; font-weight: 500;">Inicio</a>
+        <a href="/info-app" style="color: white; text-decoration: none; font-weight: 500;">Info App</a>
         <a href="/login" style="background: white; color: #667eea; padding: 0.5rem 1.5rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600;">Iniciar Sesión</a>
       `;
     } else {
@@ -32,6 +34,7 @@
       const isMonitor = user.rol === 'monitor';
       
       let links = `<a href="/" style="color: white; text-decoration: none; font-weight: 500;">Inicio</a>`;
+      links += `<a href="/info-app" style="color: white; text-decoration: none; font-weight: 500;">Info App</a>`;
       links += `<a href="/guia" style="color: white; text-decoration: none; font-weight: 500;">Guia</a>`;
       
       if (isMonitor) {

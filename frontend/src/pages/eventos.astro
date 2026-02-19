@@ -45,6 +45,7 @@ import Layout from '../layouts/Layout.astro';
         
         <form id="formEvento" style="padding: 2rem;">
           <input type="hidden" id="evento_id" />
+          <div id="modalMessageEvento" style="display: none; margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 0.5rem; font-weight: 500;"></div>
           
           <div style="display: grid; gap: 1.5rem;">
             <!-- Nombre -->
@@ -130,6 +131,7 @@ import Layout from '../layouts/Layout.astro';
   </div>
 
   <script>
+    // @ts-nocheck
     const API_URL = 'http://localhost:3001';
     const accessToken = localStorage.getItem('accessToken');
 
@@ -145,6 +147,20 @@ import Layout from '../layouts/Layout.astro';
     const modal = document.getElementById('modalEvento');
     const form = document.getElementById('formEvento');
     const messageEl = document.getElementById('message');
+    const modalMessageEl = document.getElementById('modalMessageEvento');
+
+    function showModalMessage(text, type) {
+      modalMessageEl.textContent = text;
+      modalMessageEl.style.display = 'block';
+      modalMessageEl.style.backgroundColor = type === 'success' ? '#d1fae5' : '#fee2e2';
+      modalMessageEl.style.color = type === 'success' ? '#065f46' : '#991b1b';
+      modalMessageEl.style.border = `1px solid ${type === 'success' ? '#a7f3d0' : '#fecaca'}`;
+    }
+
+    function clearModalMessage() {
+      modalMessageEl.style.display = 'none';
+      modalMessageEl.textContent = '';
+    }
 
     // Cargar eventos
     async function loadEventos() {
@@ -238,6 +254,7 @@ import Layout from '../layouts/Layout.astro';
     document.getElementById('btnNuevoEvento').onclick = () => {
       editingEventoId = null;
       form.reset();
+      clearModalMessage();
       document.getElementById('evento_id').value = '';
       document.getElementById('modalTitle').textContent = 'Nuevo Evento';
       document.getElementById('activoContainer').style.display = 'none';
@@ -256,6 +273,7 @@ import Layout from '../layouts/Layout.astro';
 
         const evento = result.data;
         editingEventoId = eventoId;
+        clearModalMessage();
 
         document.getElementById('evento_id').value = evento.id;
         document.getElementById('nombre').value = evento.nombre || '';
@@ -304,6 +322,7 @@ import Layout from '../layouts/Layout.astro';
       e.preventDefault();
 
       try {
+        clearModalMessage();
         const fotosText = document.getElementById('fotos').value.trim();
         const fotosArray = fotosText ? fotosText.split('\n').map(url => url.trim()).filter(url => url) : [];
 
@@ -338,23 +357,34 @@ import Layout from '../layouts/Layout.astro';
           body: JSON.stringify(eventoData),
         });
 
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error?.message);
+        let data = null;
+        try {
+          data = await response.json();
+        } catch (_) {
+          data = null;
+        }
+        if (!response.ok) {
+          const serverMessage = data?.error?.message || data?.message || `Error HTTP ${response.status}`;
+          throw new Error(serverMessage);
+        }
 
+        showModalMessage(`Evento ${editingEventoId ? 'actualizado' : 'creado'} exitosamente`, 'success');
         showMessage(`Evento ${editingEventoId ? 'actualizado' : 'creado'} exitosamente`, 'success');
         modal.style.display = 'none';
         loadEventos();
       } catch (error) {
-        showMessage('Error al guardar evento: ' + error.message, 'error');
+        showModalMessage('Error al guardar evento: ' + error.message, 'error');
       }
     };
 
     // Cerrar modal
     document.getElementById('btnCerrarModal').onclick = () => {
+      clearModalMessage();
       modal.style.display = 'none';
     };
 
     document.getElementById('btnCancelar').onclick = () => {
+      clearModalMessage();
       modal.style.display = 'none';
     };
 

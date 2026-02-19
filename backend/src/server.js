@@ -14,6 +14,7 @@ const documentRoutes = require('./routes/documents');
 
 // Import middleware
 const { errorHandler, requestLogger } = require('./middleware/errorHandler');
+const { generalLimiter } = require('./middleware/rateLimiters');
 
 const app = express();
 
@@ -44,9 +45,12 @@ app.use(helmet({
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true,
-  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Simulate-User'],
 }));
+
+// Rate limiting general
+app.use(generalLimiter);
 
 // Body parsing
 app.use(express.json({ limit: '5mb' }));

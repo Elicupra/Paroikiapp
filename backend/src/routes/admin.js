@@ -40,6 +40,9 @@ router.post('/usuarios', adminController.createUsuario);
 // PUT /api/admin/usuarios/:usuarioId
 router.put('/usuarios/:usuarioId', adminController.updateUsuario);
 
+// DELETE /api/admin/usuarios/:usuarioId
+router.delete('/usuarios/:usuarioId', adminController.deleteUsuario);
+
 // PATCH /api/admin/usuarios/:usuarioId/toggle-active
 router.patch('/usuarios/:usuarioId/toggle-active', adminController.toggleUsuarioActivo);
 

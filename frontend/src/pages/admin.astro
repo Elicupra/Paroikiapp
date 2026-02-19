@@ -1,7 +1,5 @@
 ---
 import Layout from "../layouts/Layout.astro";
-
-const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 ---
 
 <Layout title="Panel de Administrador">
@@ -10,6 +8,19 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 
     <div style="margin-bottom: 1rem;">
       <button onclick="window.logout()" style="background-color: var(--color-danger);">Cerrar Sesión</button>
+    </div>
+
+    <div style="background: #f8fafc; padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #e5e7eb; margin-bottom: 2rem;">
+      <h3 style="margin: 0 0 1rem 0;">Simular Monitor</h3>
+      <p style="margin: 0 0 1rem 0; color: #6b7280;">Selecciona un monitor para ver el panel exactamente como lo ve el monitor.</p>
+      <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+        <select id="simMonitorSelect" style="min-width: 260px; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.5rem;">
+          <option value="">Cargando monitores...</option>
+        </select>
+        <button id="btnSimular" style="background: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer;">Simular</button>
+        <button id="btnSalirSimulacion" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; display: none;">Salir de simulacion</button>
+        <span id="simStatus" style="color: #6b7280;"></span>
+      </div>
     </div>
 
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 2rem;">
@@ -43,6 +54,7 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
   </div>
 
   <script>
+    // @ts-nocheck
     // Hacer funciones globales
     const API_URL = 'http://localhost:3001';
     window.accessToken = localStorage.getItem('accessToken');
@@ -68,6 +80,75 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
       window.location.href = '/';
+    };
+
+    const simKey = 'simulatedMonitor';
+    const simSelect = document.getElementById('simMonitorSelect');
+    const simStatus = document.getElementById('simStatus');
+    const btnSimular = document.getElementById('btnSimular');
+    const btnSalirSimulacion = document.getElementById('btnSalirSimulacion');
+
+    function updateSimStatus() {
+      const saved = localStorage.getItem(simKey);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          simStatus.textContent = `Simulando: ${parsed.nombre}`;
+          btnSalirSimulacion.style.display = 'inline-block';
+          if (simSelect && parsed.id) {
+            simSelect.value = parsed.id;
+          }
+          return;
+        } catch (e) {
+          localStorage.removeItem(simKey);
+        }
+      }
+      simStatus.textContent = '';
+      btnSalirSimulacion.style.display = 'none';
+    }
+
+    async function loadMonitoresSimulacion() {
+      try {
+        const response = await fetch(`${API_URL}/api/admin/usuarios`, {
+          headers: { 'Authorization': 'Bearer ' + window.accessToken }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || 'Error al cargar monitores');
+
+        const monitores = (data.data || []).filter(u => u.rol === 'monitor' && u.activo);
+        simSelect.innerHTML = '<option value="">Selecciona un monitor</option>';
+        monitores.forEach(m => {
+          const option = document.createElement('option');
+          option.value = m.id;
+          option.textContent = `${m.nombre_mostrado} (${m.email})`;
+          simSelect.appendChild(option);
+        });
+
+        updateSimStatus();
+      } catch (error) {
+        simSelect.innerHTML = '<option value="">Error al cargar monitores</option>';
+      }
+    }
+
+    btnSimular.onclick = () => {
+      const selectedId = simSelect.value;
+      if (!selectedId) {
+        window.messageEl.className = 'error';
+        window.messageEl.textContent = 'Selecciona un monitor para simular';
+        return;
+      }
+
+      const selectedText = simSelect.options[simSelect.selectedIndex].textContent;
+      localStorage.setItem(simKey, JSON.stringify({ id: selectedId, nombre: selectedText }));
+      localStorage.removeItem('selectedEvento');
+      updateSimStatus();
+      window.location.href = '/monitor';
+    };
+
+    btnSalirSimulacion.onclick = () => {
+      localStorage.removeItem(simKey);
+      localStorage.removeItem('selectedEvento');
+      updateSimStatus();
     };
 
     window.loadEventos = async function() {
@@ -250,5 +331,6 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
     window.loadUsuarios();
     window.loadRegistrationLinks();
     window.loadJovenes();
+    loadMonitoresSimulacion();
   </script>
 </Layout>

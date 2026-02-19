@@ -1,0 +1,9 @@
+{
+  "name": "paroikiapp",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "e2e": "node test/run-e2e.js",
+    "e2e:only": "node test/e2e.js"
+  }
+}

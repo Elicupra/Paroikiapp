@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware, requireRole } = require('../middleware/auth');
+const { authMiddleware, requireMonitorOrSimulated } = require('../middleware/auth');
 const { validatePago } = require('../middleware/validators');
 const monitorController = require('../controllers/monitorController');
 
-// Todos los endpoints requieren autenticación de monitor
+// Todos los endpoints requieren autenticación de monitor o simulacion de organizador
 router.use(authMiddleware);
-router.use(requireRole(['monitor']));
+router.use(requireMonitorOrSimulated);
 
 // GET /api/monitor/registration-link
 router.get('/registration-link', monitorController.getRegistrationLink);

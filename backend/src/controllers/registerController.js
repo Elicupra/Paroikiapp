@@ -2,10 +2,23 @@ const pool = require('../models/db');
 const { validateJoven } = require('../middleware/validators');
 const { sendNewYouthNotification } = require('../services/notifications');
 
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const isValidUUID = (value) => typeof value === 'string' && uuidRegex.test(value);
+
 // GET /register/:token - Obtener información del evento
 const getEventoInfo = async (req, res, next) => {
   try {
     const { token } = req.params;
+
+    if (!isValidUUID(token)) {
+      return res.status(404).json({
+        error: {
+          code: 'EVENTO_NOT_FOUND',
+          message: 'Event not found or link is inactive',
+        },
+      });
+    }
 
     // Validar token
     const monitorResult = await pool.query(
@@ -49,6 +62,15 @@ const registerJoven = async (req, res, next) => {
   try {
     const { token } = req.params;
     const { nombre, apellidos } = req.body;
+
+    if (!isValidUUID(token)) {
+      return res.status(404).json({
+        error: {
+          code: 'INVALID_TOKEN',
+          message: 'Invalid or inactive token',
+        },
+      });
+    }
 
     // Validar token del monitor
     const monitorResult = await pool.query(
@@ -115,6 +137,15 @@ const uploadDocument = async (req, res, next) => {
   try {
     const { token, jovenId } = req.params;
     const { tipo } = req.body;
+
+    if (!isValidUUID(token) || !isValidUUID(jovenId)) {
+      return res.status(404).json({
+        error: {
+          code: 'JOVEN_NOT_FOUND',
+          message: 'Youth record not found',
+        },
+      });
+    }
 
     if (!req.file) {
       return res.status(400).json({

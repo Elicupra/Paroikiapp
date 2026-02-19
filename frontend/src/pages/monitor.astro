@@ -1,7 +1,5 @@
 ---
 import Layout from "../layouts/Layout.astro";
-
-const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 ---
 
 <Layout title="Panel de Monitor">
@@ -9,6 +7,15 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
       <h2 style="margin: 0;">Panel de Monitor</h2>
       <button onclick="window.logout()" style="background-color: var(--color-danger); padding: 0.5rem 1rem;">Cerrar Sesión</button>
+    </div>
+
+    <div id="simBanner" style="display: none; background: #fff7ed; border: 1px solid #fed7aa; padding: 1rem 1.5rem; border-radius: 0.75rem; margin-bottom: 2rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <strong>Simulando monitor:</strong> <span id="simMonitorName">-</span>
+        </div>
+        <button id="btnSalirSimulacionMonitor" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer;">Salir de simulacion</button>
+      </div>
     </div>
 
     <!-- Selector de Eventos -->
@@ -83,6 +90,7 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
   </div> <!-- Cierra container principal -->
 
   <script>
+    // @ts-nocheck
     // Capturar todos los errores
     window.onerror = function(msg, url, lineNo, columnNo, error) {
       console.error('[ERROR GLOBAL]', msg);
@@ -104,10 +112,50 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
     const messageEl = document.getElementById('message');
     console.log('[DOM] Message element:', messageEl);
 
+    const simKey = 'simulatedMonitor';
+    let simulatedMonitor = null;
+    const simRaw = localStorage.getItem(simKey);
+    if (simRaw) {
+      try {
+        simulatedMonitor = JSON.parse(simRaw);
+      } catch (e) {
+        localStorage.removeItem(simKey);
+      }
+    }
+
+    function updateSimulationBanner() {
+      const banner = document.getElementById('simBanner');
+      const nameEl = document.getElementById('simMonitorName');
+      const exitBtn = document.getElementById('btnSalirSimulacionMonitor');
+
+      if (simulatedMonitor && banner && nameEl && exitBtn) {
+        nameEl.textContent = simulatedMonitor.nombre || simulatedMonitor.id;
+        banner.style.display = 'block';
+        exitBtn.onclick = () => {
+          localStorage.removeItem(simKey);
+          localStorage.removeItem('selectedEvento');
+          window.location.reload();
+        };
+      } else if (banner) {
+        banner.style.display = 'none';
+      }
+    }
+
+    function getAuthHeaders(extra = {}) {
+      const headers = { 'Authorization': 'Bearer ' + accessToken };
+      if (simulatedMonitor && simulatedMonitor.id) {
+        headers['X-Simulate-User'] = simulatedMonitor.id;
+      }
+      Object.assign(headers, extra);
+      return headers;
+    }
+
     if (!accessToken) {
       console.log('[AUTH] No hay token, redirigiendo a login');
       window.location.href = '/login';
     }
+
+    updateSimulationBanner();
 
     // Variables globales para eventos
     let selectedEvento = null;
@@ -118,9 +166,7 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
       console.log('[EVENTOS] Cargando eventos del monitor...');
       try {
         const response = await fetch(`${API_URL}/api/monitor/registration-link`, {
-          headers: {
-            'Authorization': 'Bearer ' + accessToken,
-          },
+          headers: getAuthHeaders(),
         });
 
         const data = await response.json();
@@ -276,9 +322,7 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 
       try {
         const response = await fetch(`${API_URL}/api/monitor/registration-link`, {
-          headers: {
-            'Authorization': 'Bearer ' + accessToken,
-          },
+          headers: getAuthHeaders(),
         });
 
         const data = await response.json();
@@ -352,9 +396,7 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
         console.log('[JOVENES] Haciendo fetch a:', `${API_URL}/api/monitor/jovenes`);
         
         const response = await fetch(`${API_URL}/api/monitor/jovenes`, {
-          headers: {
-            'Authorization': 'Bearer ' + accessToken,
-          },
+          headers: getAuthHeaders(),
         });
 
         console.log('[JOVENES] Response recibida:', response.status, response.statusText);
@@ -470,10 +512,7 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 
         const response = await fetch(`${API_URL}/api/monitor/pagos`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + accessToken,
-          },
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ joven_id, plazo_numero, cantidad }),
         });
 

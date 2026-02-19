@@ -563,6 +563,45 @@ const removeMonitorEvento = async (req, res, next) => {
   }
 };
 
+// DELETE /api/admin/usuarios/:usuarioId
+const deleteUsuario = async (req, res, next) => {
+  try {
+    const { usuarioId } = req.params;
+    const requesterId = req.user.userId;
+
+    if (usuarioId === requesterId) {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_OPERATION',
+          message: 'No puedes eliminar tu propio usuario',
+        },
+      });
+    }
+
+    const result = await pool.query(
+      `DELETE FROM usuarios WHERE id = $1
+       RETURNING id, email, nombre_mostrado, rol`,
+      [usuarioId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({
+        error: {
+          code: 'USUARIO_NOT_FOUND',
+          message: 'Usuario not found',
+        },
+      });
+    }
+
+    res.json({
+      mensaje: 'Usuario eliminado exitosamente',
+      usuario: result.rows[0],
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getEventos,
   createEvento,
@@ -574,6 +613,7 @@ module.exports = {
   createUsuario,
   getUsuario,
   updateUsuario,
+  deleteUsuario,
   toggleUsuarioActivo,
   getUsuarioEventos,
   assignMonitorEvento,

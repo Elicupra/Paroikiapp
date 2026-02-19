@@ -46,6 +46,7 @@ import Layout from '../layouts/Layout.astro';
 
         <form id="formUsuario" style="padding: 2rem;">
           <input type="hidden" id="usuario_id" />
+          <div id="modalMessageUsuario" style="display: none; margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 0.5rem; font-weight: 500;"></div>
 
           <div style="display: grid; gap: 1.25rem;">
             <div>
@@ -106,6 +107,7 @@ import Layout from '../layouts/Layout.astro';
   </div>
 
   <script>
+    // @ts-nocheck
     const API_URL = 'http://localhost:3001';
     const accessToken = localStorage.getItem('accessToken');
 
@@ -122,6 +124,20 @@ import Layout from '../layouts/Layout.astro';
     const modalAsignacion = document.getElementById('modalAsignacion');
     const formUsuario = document.getElementById('formUsuario');
     const messageEl = document.getElementById('message');
+    const modalMessageEl = document.getElementById('modalMessageUsuario');
+
+    function showModalMessage(text, type) {
+      modalMessageEl.textContent = text;
+      modalMessageEl.style.display = 'block';
+      modalMessageEl.style.backgroundColor = type === 'success' ? '#d1fae5' : '#fee2e2';
+      modalMessageEl.style.color = type === 'success' ? '#065f46' : '#991b1b';
+      modalMessageEl.style.border = `1px solid ${type === 'success' ? '#a7f3d0' : '#fecaca'}`;
+    }
+
+    function clearModalMessage() {
+      modalMessageEl.style.display = 'none';
+      modalMessageEl.textContent = '';
+    }
 
     async function loadEventosBase() {
       try {
@@ -227,6 +243,7 @@ import Layout from '../layouts/Layout.astro';
     document.getElementById('btnNuevoUsuario').onclick = () => {
       editingUsuarioId = null;
       formUsuario.reset();
+      clearModalMessage();
       document.getElementById('usuario_id').value = '';
       document.getElementById('modalUserTitle').textContent = 'Nuevo Usuario';
       document.getElementById('passwordContainer').style.display = 'block';
@@ -245,6 +262,7 @@ import Layout from '../layouts/Layout.astro';
 
         const u = data.data;
         editingUsuarioId = usuarioId;
+        clearModalMessage();
         document.getElementById('usuario_id').value = u.id;
         document.getElementById('nombre_mostrado').value = u.nombre_mostrado || '';
         document.getElementById('email').value = u.email || '';
@@ -280,6 +298,7 @@ import Layout from '../layouts/Layout.astro';
       e.preventDefault();
 
       try {
+        clearModalMessage();
         const payload = {
           nombre_mostrado: document.getElementById('nombre_mostrado').value,
           email: document.getElementById('email').value,
@@ -308,19 +327,29 @@ import Layout from '../layouts/Layout.astro';
           body: JSON.stringify(payload),
         });
 
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error?.message);
+        let data = null;
+        try {
+          data = await response.json();
+        } catch (_) {
+          data = null;
+        }
+        if (!response.ok) {
+          const serverMessage = data?.error?.message || data?.message || `Error HTTP ${response.status}`;
+          throw new Error(serverMessage);
+        }
 
         if (data.password_temporal) {
+          showModalMessage(`Usuario creado. Password temporal: ${data.password_temporal}`, 'success');
           showMessage(`Usuario creado. Password temporal: ${data.password_temporal}`, 'success');
         } else {
+          showModalMessage(`Usuario ${editingUsuarioId ? 'actualizado' : 'creado'} exitosamente`, 'success');
           showMessage(`Usuario ${editingUsuarioId ? 'actualizado' : 'creado'} exitosamente`, 'success');
         }
 
         modalUsuario.style.display = 'none';
         loadUsuarios();
       } catch (error) {
-        showMessage('Error al guardar usuario: ' + error.message, 'error');
+        showModalMessage('Error al guardar usuario: ' + error.message, 'error');
       }
     };
 
@@ -411,8 +440,8 @@ import Layout from '../layouts/Layout.astro';
       }
     };
 
-    document.getElementById('btnCerrarUsuario').onclick = () => { modalUsuario.style.display = 'none'; };
-    document.getElementById('btnCancelarUsuario').onclick = () => { modalUsuario.style.display = 'none'; };
+    document.getElementById('btnCerrarUsuario').onclick = () => { clearModalMessage(); modalUsuario.style.display = 'none'; };
+    document.getElementById('btnCancelarUsuario').onclick = () => { clearModalMessage(); modalUsuario.style.display = 'none'; };
     document.getElementById('btnCerrarAsignacion').onclick = () => { modalAsignacion.style.display = 'none'; };
 
     document.getElementById('rolFilter').onchange = renderUsuarios;
