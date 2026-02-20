@@ -34,7 +34,7 @@
       `;
     } else {
       // Usuario autenticado
-      const isAdmin = user.rol === 'organizador';
+      const isAdmin = user.rol === 'organizador' || user.rol === 'administrador';
       const isMonitor = user.rol === 'monitor';
       
       let links = `<a href="/" style="color: white; text-decoration: none; font-weight: 500;">Inicio</a>`;

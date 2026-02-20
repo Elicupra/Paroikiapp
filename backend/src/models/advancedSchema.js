@@ -2,6 +2,25 @@ const pool = require('./db');
 
 async function ensureAdvancedSchema() {
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS tipos_evento (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      nombre TEXT NOT NULL UNIQUE,
+      activo BOOLEAN DEFAULT true
+    );
+  `);
+
+  await pool.query(`
+    ALTER TABLE eventos
+    ADD COLUMN IF NOT EXISTS tipo_evento_id UUID REFERENCES tipos_evento(id);
+  `);
+
+  await pool.query(`
+    INSERT INTO tipos_evento (nombre)
+    VALUES ('Campamento'), ('Peregrinación'), ('Viaje')
+    ON CONFLICT (nombre) DO NOTHING;
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS evento_config (
       evento_id UUID PRIMARY KEY REFERENCES eventos(id) ON DELETE CASCADE,
       descuento_global NUMERIC(8,2) DEFAULT 0,

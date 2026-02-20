@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## [1.1.1] - 2026-02-20
+
+### Modificado
+- Flujo de eventos con compatibilidad progresiva para `tipo_evento_id` sin romper el campo legado `tipo`.
+- `eventos.astro` consume catálogo `tipos-evento` para construir el selector y enviar `tipo_evento_id` cuando existe.
+
+### Corregido
+- Listado/detalle de eventos devuelve preferencia de nombre de tipo desde catálogo (`tipo_evento_nombre`) cuando está disponible.
+
+## [1.1.0] - 2026-02-20
+
+### Agregado
+- Endpoints de compatibilidad para ficha personal por token: `GET/PATCH /ficha/:jovenToken`, `POST/DELETE /ficha/:jovenToken/documento`.
+- Endpoints administrativos base para tipos de evento: `GET/POST/PATCH/DELETE /api/admin/tipos-evento`.
+
+### Modificado
+- Compatibilidad de rol de administración en backend y frontend para aceptar `organizador` y `administrador` en navegación/autorización.
+- Bootstrap de esquema avanzado ampliado para crear y sembrar `tipos_evento` automáticamente si no existe.
+
 ## [1.0.1] - 2026-02-20
 
 ### Corregido

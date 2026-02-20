@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const pool = require('../models/db');
 
+const isAdminRole = (role) => role === 'organizador' || role === 'administrador';
+
 // Middleware para verificar JWT
 const authMiddleware = async (req, res, next) => {
   try {
@@ -104,7 +106,7 @@ const requireMonitorOrSimulated = async (req, res, next) => {
     return next();
   }
 
-  if (req.user.rol !== 'organizador') {
+  if (!isAdminRole(req.user.rol)) {
     return res.status(403).json({
       error: {
         code: 'FORBIDDEN',
@@ -155,4 +157,5 @@ module.exports = {
   authMiddleware,
   requireRole,
   requireMonitorOrSimulated,
+  isAdminRole,
 };

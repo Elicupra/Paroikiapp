@@ -143,6 +143,19 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
     let currentTab = 'activos';
     let eventos = [];
     let editingEventoId = null;
+    let tiposEvento = [];
+
+    function getLegacyTipoFromNombre(nombre = '') {
+      const normalized = String(nombre)
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+      if (normalized.includes('campamento')) return 'campamento';
+      if (normalized.includes('peregrin')) return 'peregrinacion';
+      if (normalized.includes('viaje')) return 'viaje';
+      return 'otro';
+    }
 
     function escapeHtml(value) {
       return String(value ?? '')
@@ -170,6 +183,41 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
     function clearModalMessage() {
       modalMessageEl.style.display = 'none';
       modalMessageEl.textContent = '';
+    }
+
+    async function loadTiposEvento() {
+      try {
+        const response = await fetch(`${API_URL}/api/admin/tipos-evento`, {
+          headers: { 'Authorization': 'Bearer ' + accessToken },
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = await response.json();
+        tiposEvento = Array.isArray(payload.data) ? payload.data.filter(t => t.activo) : [];
+
+        const tipoSelect = document.getElementById('tipo');
+        if (!tipoSelect) {
+          return;
+        }
+
+        const previousValue = tipoSelect.value;
+        const options = tiposEvento.map((tipo) => {
+          const legacyTipo = getLegacyTipoFromNombre(tipo.nombre);
+          return `<option value="${legacyTipo}" data-tipo-id="${tipo.id}">${escapeHtml(tipo.nombre)}</option>`;
+        });
+
+        options.push('<option value="otro">Otro</option>');
+        tipoSelect.innerHTML = options.join('');
+
+        if (previousValue) {
+          tipoSelect.value = previousValue;
+        }
+      } catch (error) {
+        console.error('Error loading tipos evento:', error);
+      }
     }
 
     // Cargar eventos
@@ -225,7 +273,7 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
         const fechaFin = evento.fecha_fin ? new Date(evento.fecha_fin).toLocaleDateString('es-ES') : 'N/A';
         const precio = evento.precio_base ? `€${parseFloat(evento.precio_base).toFixed(2)}` : 'N/A';
         const nombre = escapeHtml(evento.nombre);
-        const tipo = escapeHtml(evento.tipo);
+        const tipo = escapeHtml(evento.tipo_evento_nombre || evento.tipo);
         const descripcion = escapeHtml(evento.descripcion);
         const localizacion = escapeHtml(evento.localizacion);
         
@@ -298,7 +346,13 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 
         document.getElementById('evento_id').value = evento.id;
         document.getElementById('nombre').value = evento.nombre || '';
-        document.getElementById('tipo').value = evento.tipo || 'campamento';
+        const tipoSelect = document.getElementById('tipo');
+        if (evento.tipo_evento_id) {
+          const optionById = Array.from(tipoSelect.options).find((opt) => opt.dataset?.tipoId === evento.tipo_evento_id);
+          tipoSelect.value = optionById ? optionById.value : (evento.tipo || 'campamento');
+        } else {
+          tipoSelect.value = evento.tipo || 'campamento';
+        }
         document.getElementById('descripcion').value = evento.descripcion || '';
         document.getElementById('precio_base').value = evento.precio_base || '';
         document.getElementById('localizacion').value = evento.localizacion || '';
@@ -387,6 +441,12 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
           otra_informacion: document.getElementById('otra_informacion').value,
         };
 
+        const selectedTipoOption = document.getElementById('tipo').selectedOptions?.[0];
+        const tipoEventoId = selectedTipoOption?.dataset?.tipoId;
+        if (tipoEventoId) {
+          eventoData.tipo_evento_id = tipoEventoId;
+        }
+
         if (editingEventoId) {
           eventoData.activo = document.getElementById('activo').checked;
         }
@@ -470,7 +530,8 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
       setTimeout(() => { messageEl.style.display = 'none'; }, 5000);
     }
 
-    // Cargar eventos iniciales
+    // Carga inicial
+    loadTiposEvento();
     loadEventos();
   </script>
 

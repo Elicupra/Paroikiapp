@@ -3,9 +3,15 @@ const router = express.Router();
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const adminController = require('../controllers/adminController');
 
-// Todos los endpoints requieren autenticación de organizador
+// Todos los endpoints requieren autenticación de administrador
 router.use(authMiddleware);
-router.use(requireRole(['organizador']));
+router.use(requireRole(['organizador', 'administrador']));
+
+// Tipos de evento
+router.get('/tipos-evento', adminController.getTiposEvento);
+router.post('/tipos-evento', adminController.createTipoEvento);
+router.patch('/tipos-evento/:tipoId', adminController.updateTipoEvento);
+router.delete('/tipos-evento/:tipoId', adminController.deleteTipoEvento);
 
 // GET /api/admin/registration-links
 router.get('/registration-links', adminController.getRegistrationLinks);

@@ -1,18 +1,57 @@
 const pool = require('../models/db');
 const { hashPassword, generateUUID } = require('../utils/crypto');
 
+const normalizeRole = (role) => role === 'administrador' ? 'organizador' : role;
+
+let hasTipoEventoColumnCache = null;
+
+const getLegacyTipoFromNombre = (nombre = '') => {
+  const normalized = String(nombre)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  if (normalized.includes('campamento')) return 'campamento';
+  if (normalized.includes('peregrin')) return 'peregrinacion';
+  if (normalized.includes('viaje')) return 'viaje';
+  return 'otro';
+};
+
+const hasTipoEventoColumn = async () => {
+  if (hasTipoEventoColumnCache !== null) {
+    return hasTipoEventoColumnCache;
+  }
+
+  const result = await pool.query(
+    `SELECT 1
+     FROM information_schema.columns
+     WHERE table_schema = current_schema()
+       AND table_name = 'eventos'
+       AND column_name = 'tipo_evento_id'
+     LIMIT 1`
+  );
+
+  hasTipoEventoColumnCache = result.rows.length > 0;
+  return hasTipoEventoColumnCache;
+};
+
 // GET /api/admin/eventos
 const getEventos = async (req, res, next) => {
   try {
     const { incluir_pasados } = req.query;
+    const withTipoEvento = await hasTipoEventoColumn();
+
     let query = `SELECT e.id, e.nombre, e.tipo, e.descripcion, e.precio_base, e.fecha_inicio, e.fecha_fin,
                  e.localizacion, e.fotos, e.otra_informacion, e.activo, e.creado_en,
+                 ${withTipoEvento ? 'e.tipo_evento_id,' : 'NULL::uuid as tipo_evento_id,'}
+                 ${withTipoEvento ? 'te.nombre as tipo_evento_nombre,' : 'NULL::text as tipo_evento_nombre,'}
                  COALESCE(ec.descuento_global, 0) as descuento_global,
                  COUNT(DISTINCT j.id)::int as total_jovenes,
                  COUNT(DISTINCT m.id)::int as total_grupos,
                  COALESCE(SUM(CASE WHEN p.pagado = true THEN p.cantidad - COALESCE(p.descuento, 0) ELSE 0 END), 0) as total_pagado,
                  (COALESCE(e.precio_base, 0) * GREATEST(5, COUNT(DISTINCT m.id))) - (COALESCE(ec.descuento_global, 0) * GREATEST(5, COUNT(DISTINCT m.id))) as total_esperado
                  FROM eventos e
+                 ${withTipoEvento ? 'LEFT JOIN tipos_evento te ON te.id = e.tipo_evento_id' : ''}
                  LEFT JOIN evento_config ec ON ec.evento_id = e.id
                  LEFT JOIN monitores m ON m.evento_id = e.id AND m.activo = true
                  LEFT JOIN jovenes j ON j.evento_id = e.id
@@ -22,7 +61,7 @@ const getEventos = async (req, res, next) => {
       query += ` WHERE e.activo = true`;
     }
     
-    query += ` GROUP BY e.id, ec.descuento_global ORDER BY e.creado_en DESC`;
+    query += ` GROUP BY e.id, ec.descuento_global${withTipoEvento ? ', te.nombre' : ''} ORDER BY e.creado_en DESC`;
     
     const result = await pool.query(query);
 
@@ -78,6 +117,162 @@ const updateEventoDescuentoGlobal = async (req, res, next) => {
   }
 };
 
+// GET /api/admin/tipos-evento
+const getTiposEvento = async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, nombre, activo
+       FROM tipos_evento
+       ORDER BY nombre ASC`
+    );
+
+    res.json({
+      data: result.rows,
+      total: result.rows.length,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/admin/tipos-evento
+const createTipoEvento = async (req, res, next) => {
+  try {
+    const nombre = String(req.body?.nombre || '').trim();
+
+    if (!nombre) {
+      return res.status(400).json({
+        error: {
+          code: 'MISSING_FIELDS',
+          message: 'nombre is required',
+        },
+      });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO tipos_evento (nombre)
+       VALUES ($1)
+       RETURNING id, nombre, activo`,
+      [nombre]
+    );
+
+    res.status(201).json({
+      mensaje: 'Tipo de evento creado',
+      data: result.rows[0],
+    });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({
+        error: {
+          code: 'TIPO_EVENTO_EXISTS',
+          message: 'Tipo de evento already exists',
+        },
+      });
+    }
+    next(err);
+  }
+};
+
+// PATCH /api/admin/tipos-evento/:tipoId
+const updateTipoEvento = async (req, res, next) => {
+  try {
+    const { tipoId } = req.params;
+    const updates = [];
+    const values = [];
+
+    if (req.body?.nombre !== undefined) {
+      const nombre = String(req.body.nombre).trim();
+      if (!nombre) {
+        return res.status(400).json({
+          error: {
+            code: 'INVALID_NAME',
+            message: 'nombre cannot be empty',
+          },
+        });
+      }
+      values.push(nombre);
+      updates.push(`nombre = $${values.length}`);
+    }
+
+    if (req.body?.activo !== undefined) {
+      values.push(Boolean(req.body.activo));
+      updates.push(`activo = $${values.length}`);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({
+        error: {
+          code: 'NO_UPDATES',
+          message: 'No fields to update',
+        },
+      });
+    }
+
+    values.push(tipoId);
+    const result = await pool.query(
+      `UPDATE tipos_evento
+       SET ${updates.join(', ')}
+       WHERE id = $${values.length}
+       RETURNING id, nombre, activo`,
+      values
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({
+        error: {
+          code: 'TIPO_EVENTO_NOT_FOUND',
+          message: 'Tipo de evento not found',
+        },
+      });
+    }
+
+    res.json({
+      mensaje: 'Tipo de evento actualizado',
+      data: result.rows[0],
+    });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({
+        error: {
+          code: 'TIPO_EVENTO_EXISTS',
+          message: 'Tipo de evento already exists',
+        },
+      });
+    }
+    next(err);
+  }
+};
+
+// DELETE /api/admin/tipos-evento/:tipoId
+const deleteTipoEvento = async (req, res, next) => {
+  try {
+    const { tipoId } = req.params;
+
+    const result = await pool.query(
+      `DELETE FROM tipos_evento
+       WHERE id = $1
+       RETURNING id, nombre`,
+      [tipoId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({
+        error: {
+          code: 'TIPO_EVENTO_NOT_FOUND',
+          message: 'Tipo de evento not found',
+        },
+      });
+    }
+
+    res.json({
+      mensaje: 'Tipo de evento eliminado',
+      data: result.rows[0],
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // GET /api/admin/usuarios/:usuarioId/jovenes
 const getUsuarioJovenes = async (req, res, next) => {
   try {
@@ -105,9 +300,34 @@ const getUsuarioJovenes = async (req, res, next) => {
 // POST /api/admin/eventos
 const createEvento = async (req, res, next) => {
   try {
-    const { nombre, tipo, descripcion, precio_base, fecha_inicio, fecha_fin, localizacion, fotos, otra_informacion } = req.body;
+    const { nombre, tipo, tipo_evento_id, descripcion, precio_base, fecha_inicio, fecha_fin, localizacion, fotos, otra_informacion } = req.body;
+    const withTipoEvento = await hasTipoEventoColumn();
 
-    if (!nombre || !tipo) {
+    let finalTipo = tipo;
+    let finalTipoEventoId = null;
+
+    if (withTipoEvento && tipo_evento_id) {
+      const tipoResult = await pool.query(
+        `SELECT id, nombre FROM tipos_evento WHERE id = $1`,
+        [tipo_evento_id]
+      );
+
+      if (!tipoResult.rows.length) {
+        return res.status(400).json({
+          error: {
+            code: 'INVALID_TIPO_EVENTO',
+            message: 'tipo_evento_id is invalid',
+          },
+        });
+      }
+
+      finalTipoEventoId = tipoResult.rows[0].id;
+      if (!finalTipo) {
+        finalTipo = getLegacyTipoFromNombre(tipoResult.rows[0].nombre);
+      }
+    }
+
+    if (!nombre || !finalTipo) {
       return res.status(400).json({
         error: {
           code: 'MISSING_FIELDS',
@@ -116,12 +336,19 @@ const createEvento = async (req, res, next) => {
       });
     }
 
-    const result = await pool.query(
-      `INSERT INTO eventos (nombre, tipo, descripcion, precio_base, fecha_inicio, fecha_fin, localizacion, fotos, otra_informacion)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       RETURNING *`,
-      [nombre, tipo, descripcion, precio_base, fecha_inicio, fecha_fin, localizacion, fotos || [], otra_informacion]
-    );
+    const result = withTipoEvento
+      ? await pool.query(
+        `INSERT INTO eventos (nombre, tipo, tipo_evento_id, descripcion, precio_base, fecha_inicio, fecha_fin, localizacion, fotos, otra_informacion)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         RETURNING *`,
+        [nombre, finalTipo, finalTipoEventoId, descripcion, precio_base, fecha_inicio, fecha_fin, localizacion, fotos || [], otra_informacion]
+      )
+      : await pool.query(
+        `INSERT INTO eventos (nombre, tipo, descripcion, precio_base, fecha_inicio, fecha_fin, localizacion, fotos, otra_informacion)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING *`,
+        [nombre, finalTipo, descripcion, precio_base, fecha_inicio, fecha_fin, localizacion, fotos || [], otra_informacion]
+      );
 
     const evento = result.rows[0];
 
@@ -138,9 +365,14 @@ const createEvento = async (req, res, next) => {
 const getEvento = async (req, res, next) => {
   try {
     const { eventoId } = req.params;
+    const withTipoEvento = await hasTipoEventoColumn();
 
     const result = await pool.query(
-      `SELECT * FROM eventos WHERE id = $1`,
+      `SELECT e.*,
+              ${withTipoEvento ? 'te.nombre as tipo_evento_nombre' : 'NULL::text as tipo_evento_nombre'}
+       FROM eventos e
+       ${withTipoEvento ? 'LEFT JOIN tipos_evento te ON te.id = e.tipo_evento_id' : ''}
+       WHERE e.id = $1`,
       [eventoId]
     );
 
@@ -165,9 +397,34 @@ const getEvento = async (req, res, next) => {
 const updateEvento = async (req, res, next) => {
   try {
     const { eventoId } = req.params;
-    const { nombre, tipo, descripcion, precio_base, fecha_inicio, fecha_fin, localizacion, fotos, otra_informacion, activo } = req.body;
+    const { nombre, tipo, tipo_evento_id, descripcion, precio_base, fecha_inicio, fecha_fin, localizacion, fotos, otra_informacion, activo } = req.body;
+    const withTipoEvento = await hasTipoEventoColumn();
 
-    if (!nombre || !tipo) {
+    let finalTipo = tipo;
+    let finalTipoEventoId = null;
+
+    if (withTipoEvento && tipo_evento_id) {
+      const tipoResult = await pool.query(
+        `SELECT id, nombre FROM tipos_evento WHERE id = $1`,
+        [tipo_evento_id]
+      );
+
+      if (!tipoResult.rows.length) {
+        return res.status(400).json({
+          error: {
+            code: 'INVALID_TIPO_EVENTO',
+            message: 'tipo_evento_id is invalid',
+          },
+        });
+      }
+
+      finalTipoEventoId = tipoResult.rows[0].id;
+      if (!finalTipo) {
+        finalTipo = getLegacyTipoFromNombre(tipoResult.rows[0].nombre);
+      }
+    }
+
+    if (!nombre || !finalTipo) {
       return res.status(400).json({
         error: {
           code: 'MISSING_FIELDS',
@@ -176,15 +433,25 @@ const updateEvento = async (req, res, next) => {
       });
     }
 
-    const result = await pool.query(
-      `UPDATE eventos 
-       SET nombre = $1, tipo = $2, descripcion = $3, precio_base = $4, 
-           fecha_inicio = $5, fecha_fin = $6, localizacion = $7, fotos = $8, 
-           otra_informacion = $9, activo = $10, actualizado_en = now()
-       WHERE id = $11
-       RETURNING *`,
-      [nombre, tipo, descripcion, precio_base, fecha_inicio, fecha_fin, localizacion, fotos || [], otra_informacion, activo, eventoId]
-    );
+    const result = withTipoEvento
+      ? await pool.query(
+        `UPDATE eventos 
+         SET nombre = $1, tipo = $2, tipo_evento_id = $3, descripcion = $4, precio_base = $5, 
+             fecha_inicio = $6, fecha_fin = $7, localizacion = $8, fotos = $9, 
+             otra_informacion = $10, activo = $11, actualizado_en = now()
+         WHERE id = $12
+         RETURNING *`,
+        [nombre, finalTipo, finalTipoEventoId, descripcion, precio_base, fecha_inicio, fecha_fin, localizacion, fotos || [], otra_informacion, activo, eventoId]
+      )
+      : await pool.query(
+        `UPDATE eventos 
+         SET nombre = $1, tipo = $2, descripcion = $3, precio_base = $4, 
+             fecha_inicio = $5, fecha_fin = $6, localizacion = $7, fotos = $8, 
+             otra_informacion = $9, activo = $10, actualizado_en = now()
+         WHERE id = $11
+         RETURNING *`,
+        [nombre, finalTipo, descripcion, precio_base, fecha_inicio, fecha_fin, localizacion, fotos || [], otra_informacion, activo, eventoId]
+      );
 
     if (!result.rows.length) {
       return res.status(404).json({
@@ -295,7 +562,8 @@ const createUsuario = async (req, res, next) => {
       });
     }
 
-    const rolValido = ['monitor', 'organizador'].includes(rol);
+    const normalizedRole = normalizeRole(rol);
+    const rolValido = ['monitor', 'organizador'].includes(normalizedRole);
     if (!rolValido) {
       return res.status(400).json({
         error: {
@@ -313,7 +581,7 @@ const createUsuario = async (req, res, next) => {
       `INSERT INTO usuarios (email, password_hash, nombre_mostrado, rol)
        VALUES ($1, $2, $3, $4)
        RETURNING id, email, nombre_mostrado, rol, creado_en`,
-      [email, passwordHash, nombre_mostrado, rol]
+      [email, passwordHash, nombre_mostrado, normalizedRole]
     );
 
     const usuario = result.rows[0];
@@ -465,7 +733,8 @@ const updateUsuario = async (req, res, next) => {
       });
     }
 
-    const rolValido = ['monitor', 'organizador'].includes(rol);
+    const normalizedRole = normalizeRole(rol);
+    const rolValido = ['monitor', 'organizador'].includes(normalizedRole);
     if (!rolValido) {
       return res.status(400).json({
         error: {
@@ -480,7 +749,7 @@ const updateUsuario = async (req, res, next) => {
        SET email = $1, nombre_mostrado = $2, rol = $3, activo = $4
        WHERE id = $5
        RETURNING id, email, nombre_mostrado, rol, activo, creado_en`,
-      [email, nombre_mostrado, rol, activo !== undefined ? activo : true, usuarioId]
+      [email, nombre_mostrado, normalizedRole, activo !== undefined ? activo : true, usuarioId]
     );
 
     if (!result.rows.length) {
@@ -687,6 +956,10 @@ const deleteUsuario = async (req, res, next) => {
 };
 
 module.exports = {
+  getTiposEvento,
+  createTipoEvento,
+  updateTipoEvento,
+  deleteTipoEvento,
   getEventos,
   createEvento,
   getEvento,

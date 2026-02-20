@@ -64,7 +64,7 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 
         // Redirigir según el rol
         setTimeout(() => {
-          if (data.user.rol === 'organizador') {
+          if (data.user.rol === 'organizador' || data.user.rol === 'administrador') {
             window.location.href = '/admin';
           } else {
             window.location.href = '/monitor';

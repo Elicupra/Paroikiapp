@@ -42,7 +42,7 @@ const validateRegister = [
     .isLength({ min: 8 })
     .withMessage('Password must be at least 8 characters'),
   body('rol')
-    .isIn(['monitor', 'organizador'])
+    .isIn(['monitor', 'organizador', 'administrador'])
     .withMessage('Invalid role'),
   validate,
 ];

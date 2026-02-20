@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const pool = require('../models/db');
 
+const isAdminRole = (role) => role === 'organizador' || role === 'administrador';
+
 // GET /api/documentos/:docId - Descargar documento
 const getDocument = async (req, res, next) => {
   try {
@@ -32,7 +34,7 @@ const getDocument = async (req, res, next) => {
     const doc = docResult.rows[0];
 
     // Verificar que el usuario es el monitor o un organizador
-    if (doc.usuario_id !== userId && req.user.rol !== 'organizador') {
+    if (doc.usuario_id !== userId && !isAdminRole(req.user.rol)) {
       return res.status(403).json({
         error: {
           code: 'FORBIDDEN',
@@ -42,7 +44,7 @@ const getDocument = async (req, res, next) => {
     }
 
     // Los organizadores solo pueden descargar documentos validados
-    if (req.user.rol === 'organizador' && !doc.validado) {
+    if (isAdminRole(req.user.rol) && !doc.validado) {
       return res.status(403).json({
         error: {
           code: 'DOCUMENT_NOT_VALIDATED',
