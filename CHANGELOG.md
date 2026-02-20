@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [1.2.0] - 2026-02-20
+
+### Agregado
+- Compatibilidad progresiva para `asignacion_eventos` con creación y sincronización automática desde `monitores`.
+- Endpoints admin de asignación estilo Iteración 1: `GET/POST/PATCH/DELETE /api/admin/monitores/:monitorId/eventos`, revocación de enlace por evento y `PATCH /max-jovenes`.
+
+### Modificado
+- Registro público por token ahora admite resolución desde `asignacion_eventos.enlace_token` y aplica `max_jovenes` por monitor+evento cuando está definido.
+- Resumen del monitor usa `max_jovenes` de asignación cuando existe (fallback seguro a 10).
+
 ## [1.1.1] - 2026-02-20
 
 ### Modificado

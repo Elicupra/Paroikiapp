@@ -58,6 +58,16 @@ router.patch('/usuarios/:usuarioId/toggle-active', adminController.toggleUsuario
 // GET /api/admin/usuarios/:usuarioId/eventos
 router.get('/usuarios/:usuarioId/eventos', adminController.getUsuarioEventos);
 
+// Compatibilidad asignación de eventos por monitor
+router.get('/monitores/:monitorId/eventos', adminController.getMonitorEventos);
+router.post('/monitores/:monitorId/eventos', adminController.assignMonitorEventoByPath);
+router.patch('/monitores/:monitorId/eventos/:eventoId', adminController.updateMonitorEventoAssignment);
+router.delete('/monitores/:monitorId/eventos/:eventoId', adminController.removeMonitorEventoByEvento);
+router.post('/monitores/:monitorId/eventos/:eventoId/revocar-enlace', adminController.revokeMonitorTokenByEvento);
+
+// Límite de jóvenes por monitor
+router.patch('/monitores/:monitorId/max-jovenes', adminController.updateMonitorMaxJovenes);
+
 // GET /api/admin/usuarios/:usuarioId/jovenes
 router.get('/usuarios/:usuarioId/jovenes', adminController.getUsuarioJovenes);
 

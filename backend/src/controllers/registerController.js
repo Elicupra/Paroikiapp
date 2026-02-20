@@ -7,6 +7,55 @@ const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[
 const isValidUUID = (value) => typeof value === 'string' && uuidRegex.test(value);
 
 const MAX_JOVENES_POR_MONITOR_EVENTO = 10;
+let hasAsignacionEventosTableCache = null;
+
+const hasAsignacionEventosTable = async () => {
+  if (hasAsignacionEventosTableCache !== null) {
+    return hasAsignacionEventosTableCache;
+  }
+
+  const result = await pool.query(
+    `SELECT 1
+     FROM information_schema.tables
+     WHERE table_schema = current_schema()
+       AND table_name = 'asignacion_eventos'
+     LIMIT 1`
+  );
+
+  hasAsignacionEventosTableCache = result.rows.length > 0;
+  return hasAsignacionEventosTableCache;
+};
+
+const getMonitorByToken = async (token) => {
+  if (await hasAsignacionEventosTable()) {
+    const byAsignacion = await pool.query(
+      `SELECT m.id, m.usuario_id, ae.evento_id, u.email, u.nombre_mostrado,
+              e.nombre, e.tipo, e.fecha_inicio, e.fecha_fin, ae.max_jovenes
+       FROM asignacion_eventos ae
+       JOIN monitores m ON m.id = ae.monitor_id
+       JOIN usuarios u ON m.usuario_id = u.id
+       JOIN eventos e ON ae.evento_id = e.id
+       WHERE ae.enlace_token = $1 AND ae.activo = true AND m.activo = true`,
+      [token]
+    );
+
+    if (byAsignacion.rows.length) {
+      return byAsignacion.rows[0];
+    }
+  }
+
+  const legacy = await pool.query(
+    `SELECT m.id, m.usuario_id, m.evento_id, u.email, u.nombre_mostrado,
+            e.nombre, e.tipo, e.fecha_inicio, e.fecha_fin, NULL::int as max_jovenes
+     FROM monitores m
+     JOIN usuarios u ON m.usuario_id = u.id
+     JOIN eventos e ON m.evento_id = e.id
+     WHERE m.enlace_token = $1 AND m.activo = true`,
+    [token]
+  );
+
+  return legacy.rows[0] || null;
+};
 
 // GET /register/:token - Obtener información del evento
 const getEventoInfo = async (req, res, next) => {
@@ -23,16 +72,9 @@ const getEventoInfo = async (req, res, next) => {
     }
 
     // Validar token
-    const monitorResult = await pool.query(
-      `SELECT m.id, m.usuario_id, m.evento_id, u.nombre_mostrado, e.nombre, e.tipo, e.fecha_inicio, e.fecha_fin
-       FROM monitores m
-       JOIN usuarios u ON m.usuario_id = u.id
-       JOIN eventos e ON m.evento_id = e.id
-       WHERE m.enlace_token = $1 AND m.activo = true`,
-      [token]
-    );
+    const monitor = await getMonitorByToken(token);
 
-    if (!monitorResult.rows.length) {
+    if (!monitor) {
       return res.status(404).json({
         error: {
           code: 'EVENTO_NOT_FOUND',
@@ -41,7 +83,7 @@ const getEventoInfo = async (req, res, next) => {
       });
     }
 
-    const { id, usuario_id, evento_id, nombre_mostrado, nombre, tipo, fecha_inicio, fecha_fin } = monitorResult.rows[0];
+    const { nombre_mostrado, nombre, tipo, fecha_inicio, fecha_fin } = monitor;
 
     res.json({
       evento: {
@@ -75,16 +117,9 @@ const registerJoven = async (req, res, next) => {
     }
 
     // Validar token del monitor
-    const monitorResult = await pool.query(
-      `SELECT m.id, m.usuario_id, m.evento_id, u.email, u.nombre_mostrado, e.nombre
-       FROM monitores m
-       JOIN usuarios u ON m.usuario_id = u.id
-       JOIN eventos e ON m.evento_id = e.id
-       WHERE m.enlace_token = $1 AND m.activo = true`,
-      [token]
-    );
+    const monitor = await getMonitorByToken(token);
 
-    if (!monitorResult.rows.length) {
+    if (!monitor) {
       return res.status(404).json({
         error: {
           code: 'INVALID_TOKEN',
@@ -93,18 +128,22 @@ const registerJoven = async (req, res, next) => {
       });
     }
 
-    const { id: monitorId, evento_id: eventoId, email: monitorEmail, nombre_mostrado, nombre: eventoNombre } = monitorResult.rows[0];
+    const { id: monitorId, evento_id: eventoId, email: monitorEmail, nombre_mostrado, nombre: eventoNombre, max_jovenes } = monitor;
 
     const countResult = await pool.query(
       'SELECT COUNT(*)::int as total FROM jovenes WHERE monitor_id = $1 AND evento_id = $2',
       [monitorId, eventoId]
     );
 
-    if ((countResult.rows[0]?.total || 0) >= MAX_JOVENES_POR_MONITOR_EVENTO) {
+    const maxJovenes = Number.isInteger(Number(max_jovenes)) && Number(max_jovenes) > 0
+      ? Number(max_jovenes)
+      : MAX_JOVENES_POR_MONITOR_EVENTO;
+
+    if ((countResult.rows[0]?.total || 0) >= maxJovenes) {
       return res.status(409).json({
         error: {
           code: 'MAX_JOVENES_REACHED',
-          message: `Este monitor ya alcanzó el máximo de ${MAX_JOVENES_POR_MONITOR_EVENTO} jóvenes para el evento`,
+          message: `Este monitor ya alcanzó el máximo de ${maxJovenes} jóvenes para el evento`,
         },
       });
     }
@@ -253,13 +292,22 @@ const uploadDocument = async (req, res, next) => {
     }
 
     // Validar que el token corresponde al joven
+    const withAsignaciones = await hasAsignacionEventosTable();
     const jovenResult = await pool.query(
-      `SELECT j.id, j.monitor_id, m.enlace_token, m.usuario_id, u.email, u.nombre_mostrado, j.nombre, e.nombre as evento_nombre
-       FROM jovenes j
-       JOIN monitores m ON j.monitor_id = m.id
-       JOIN usuarios u ON m.usuario_id = u.id
-       JOIN eventos e ON j.evento_id = e.id
-       WHERE j.id = $1 AND m.enlace_token = $2 AND m.activo = true`,
+      withAsignaciones
+        ? `SELECT j.id, j.monitor_id, m.usuario_id, u.email, u.nombre_mostrado, j.nombre, e.nombre as evento_nombre
+           FROM jovenes j
+           JOIN monitores m ON j.monitor_id = m.id
+           JOIN usuarios u ON m.usuario_id = u.id
+           JOIN eventos e ON j.evento_id = e.id
+           JOIN asignacion_eventos ae ON ae.monitor_id = m.id AND ae.evento_id = j.evento_id
+           WHERE j.id = $1 AND ae.enlace_token = $2 AND ae.activo = true AND m.activo = true`
+        : `SELECT j.id, j.monitor_id, m.enlace_token, m.usuario_id, u.email, u.nombre_mostrado, j.nombre, e.nombre as evento_nombre
+           FROM jovenes j
+           JOIN monitores m ON j.monitor_id = m.id
+           JOIN usuarios u ON m.usuario_id = u.id
+           JOIN eventos e ON j.evento_id = e.id
+           WHERE j.id = $1 AND m.enlace_token = $2 AND m.activo = true`,
       [jovenId, token]
     );
 

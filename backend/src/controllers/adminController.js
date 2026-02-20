@@ -4,6 +4,7 @@ const { hashPassword, generateUUID } = require('../utils/crypto');
 const normalizeRole = (role) => role === 'administrador' ? 'organizador' : role;
 
 let hasTipoEventoColumnCache = null;
+let hasAsignacionEventosTableCache = null;
 
 const getLegacyTipoFromNombre = (nombre = '') => {
   const normalized = String(nombre)
@@ -33,6 +34,23 @@ const hasTipoEventoColumn = async () => {
 
   hasTipoEventoColumnCache = result.rows.length > 0;
   return hasTipoEventoColumnCache;
+};
+
+const hasAsignacionEventosTable = async () => {
+  if (hasAsignacionEventosTableCache !== null) {
+    return hasAsignacionEventosTableCache;
+  }
+
+  const result = await pool.query(
+    `SELECT 1
+     FROM information_schema.tables
+     WHERE table_schema = current_schema()
+       AND table_name = 'asignacion_eventos'
+     LIMIT 1`
+  );
+
+  hasAsignacionEventosTableCache = result.rows.length > 0;
+  return hasAsignacionEventosTableCache;
 };
 
 // GET /api/admin/eventos
@@ -626,6 +644,14 @@ const revokeMonitorToken = async (req, res, next) => {
       });
     }
 
+    if (await hasAsignacionEventosTable()) {
+      await pool.query(
+        `UPDATE asignacion_eventos SET enlace_token = $1
+         WHERE monitor_id = $2`,
+        [newToken, monitorId]
+      );
+    }
+
     res.json({
       mensaje: 'Token revocado y regenerado',
       monitor: result.rows[0],
@@ -638,14 +664,24 @@ const revokeMonitorToken = async (req, res, next) => {
 // GET /api/admin/registration-links - Obtener enlaces de registro de todos los monitores
 const getRegistrationLinks = async (req, res, next) => {
   try {
+    const withAsignaciones = await hasAsignacionEventosTable();
     const result = await pool.query(
-      `SELECT m.id, m.enlace_token, m.evento_id, m.usuario_id, e.nombre as evento_nombre,
-              u.email, u.nombre_mostrado
-       FROM monitores m
-       JOIN eventos e ON m.evento_id = e.id
-       JOIN usuarios u ON m.usuario_id = u.id
-       WHERE m.activo = true
-       ORDER BY e.nombre, u.nombre_mostrado`
+      withAsignaciones
+        ? `SELECT m.id, ae.enlace_token, ae.evento_id, m.usuario_id, e.nombre as evento_nombre,
+                  u.email, u.nombre_mostrado, ae.max_jovenes
+           FROM asignacion_eventos ae
+           JOIN monitores m ON m.id = ae.monitor_id
+           JOIN eventos e ON ae.evento_id = e.id
+           JOIN usuarios u ON m.usuario_id = u.id
+           WHERE ae.activo = true AND m.activo = true
+           ORDER BY e.nombre, u.nombre_mostrado`
+        : `SELECT m.id, m.enlace_token, m.evento_id, m.usuario_id, e.nombre as evento_nombre,
+                  u.email, u.nombre_mostrado, NULL::int as max_jovenes
+           FROM monitores m
+           JOIN eventos e ON m.evento_id = e.id
+           JOIN usuarios u ON m.usuario_id = u.id
+           WHERE m.activo = true
+           ORDER BY e.nombre, u.nombre_mostrado`
     );
 
     const links = result.rows.map(monitor => ({
@@ -655,6 +691,7 @@ const getRegistrationLinks = async (req, res, next) => {
       evento_nombre: monitor.evento_nombre,
       monitor_email: monitor.email,
       monitor_nombre: monitor.nombre_mostrado,
+      max_jovenes: monitor.max_jovenes,
       url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/register?token=${monitor.enlace_token}`,
     }));
 
@@ -813,12 +850,16 @@ const toggleUsuarioActivo = async (req, res, next) => {
 const getUsuarioEventos = async (req, res, next) => {
   try {
     const { usuarioId } = req.params;
+    const withAsignaciones = await hasAsignacionEventosTable();
 
     const result = await pool.query(
       `SELECT m.id as monitor_id, m.evento_id, e.nombre as evento_nombre, 
-              e.tipo, e.fecha_inicio, e.fecha_fin, m.activo, m.enlace_token
+              e.tipo, e.fecha_inicio, e.fecha_fin, m.activo,
+              ${withAsignaciones ? 'COALESCE(ae.enlace_token, m.enlace_token) as enlace_token,' : 'm.enlace_token,'}
+              ${withAsignaciones ? 'ae.max_jovenes, COALESCE(ae.activo, true) as asignacion_activa' : 'NULL::int as max_jovenes, true as asignacion_activa'}
        FROM monitores m
        JOIN eventos e ON m.evento_id = e.id
+       ${withAsignaciones ? 'LEFT JOIN asignacion_eventos ae ON ae.monitor_id = m.id AND ae.evento_id = m.evento_id' : ''}
        WHERE m.usuario_id = $1
        ORDER BY e.fecha_inicio DESC NULLS LAST`,
       [usuarioId]
@@ -836,7 +877,7 @@ const getUsuarioEventos = async (req, res, next) => {
 // POST /api/admin/monitores - Asignar monitor a evento
 const assignMonitorEvento = async (req, res, next) => {
   try {
-    const { usuario_id, evento_id } = req.body;
+    const { usuario_id, evento_id, max_jovenes } = req.body;
 
     if (!usuario_id || !evento_id) {
       return res.status(400).json({
@@ -879,9 +920,23 @@ const assignMonitorEvento = async (req, res, next) => {
       });
     }
 
+    const monitor = result.rows[0];
+
+    if (await hasAsignacionEventosTable()) {
+      await pool.query(
+        `INSERT INTO asignacion_eventos (monitor_id, evento_id, enlace_token, max_jovenes, activo)
+         VALUES ($1, $2, $3, $4, true)
+         ON CONFLICT (monitor_id, evento_id)
+         DO UPDATE SET enlace_token = EXCLUDED.enlace_token,
+                       max_jovenes = COALESCE(EXCLUDED.max_jovenes, asignacion_eventos.max_jovenes),
+                       activo = true`,
+        [monitor.id, monitor.evento_id, monitor.enlace_token, max_jovenes ?? null]
+      );
+    }
+
     res.status(201).json({
       mensaje: 'Monitor asignado exitosamente',
-      monitor: result.rows[0],
+      monitor,
     });
   } catch (err) {
     next(err);
@@ -892,6 +947,10 @@ const assignMonitorEvento = async (req, res, next) => {
 const removeMonitorEvento = async (req, res, next) => {
   try {
     const { monitorId } = req.params;
+
+    if (await hasAsignacionEventosTable()) {
+      await pool.query('DELETE FROM asignacion_eventos WHERE monitor_id = $1', [monitorId]);
+    }
 
     const result = await pool.query(
       'DELETE FROM monitores WHERE id = $1 RETURNING id, usuario_id, evento_id',
@@ -911,6 +970,235 @@ const removeMonitorEvento = async (req, res, next) => {
       mensaje: 'Asignación eliminada exitosamente',
       monitor: result.rows[0],
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/admin/monitores/:monitorId/eventos
+const getMonitorEventos = async (req, res, next) => {
+  try {
+    const { monitorId } = req.params;
+
+    const result = await pool.query(
+      `SELECT m.id as monitor_id, m.usuario_id, m.evento_id, e.nombre as evento_nombre,
+              e.tipo, m.enlace_token,
+              ${await hasAsignacionEventosTable() ? 'ae.max_jovenes, COALESCE(ae.activo, true) as asignacion_activa' : 'NULL::int as max_jovenes, true as asignacion_activa'}
+       FROM monitores m
+       JOIN eventos e ON e.id = m.evento_id
+       ${await hasAsignacionEventosTable() ? 'LEFT JOIN asignacion_eventos ae ON ae.monitor_id = m.id AND ae.evento_id = m.evento_id' : ''}
+       WHERE m.id = $1 OR m.usuario_id = $1
+       ORDER BY e.fecha_inicio DESC NULLS LAST`,
+      [monitorId]
+    );
+
+    res.json({ data: result.rows, total: result.rows.length });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/admin/monitores/:monitorId/eventos
+const assignMonitorEventoByPath = async (req, res, next) => {
+  try {
+    const { monitorId } = req.params;
+    const { evento_id, max_jovenes } = req.body;
+
+    if (!evento_id) {
+      return res.status(400).json({
+        error: { code: 'MISSING_FIELDS', message: 'evento_id is required' },
+      });
+    }
+
+    const monitorBase = await pool.query(
+      `SELECT id, usuario_id FROM monitores WHERE id = $1
+       UNION
+       SELECT id, usuario_id FROM monitores WHERE usuario_id = $1
+       LIMIT 1`,
+      [monitorId]
+    );
+
+    if (!monitorBase.rows.length) {
+      return res.status(404).json({
+        error: { code: 'MONITOR_NOT_FOUND', message: 'Monitor not found' },
+      });
+    }
+
+    const usuarioId = monitorBase.rows[0].usuario_id;
+    const result = await pool.query(
+      `INSERT INTO monitores (usuario_id, evento_id)
+       VALUES ($1, $2)
+       ON CONFLICT (usuario_id, evento_id) DO UPDATE SET activo = true
+       RETURNING id, usuario_id, evento_id, enlace_token, activo`,
+      [usuarioId, evento_id]
+    );
+
+    const monitor = result.rows[0];
+
+    if (await hasAsignacionEventosTable()) {
+      await pool.query(
+        `INSERT INTO asignacion_eventos (monitor_id, evento_id, enlace_token, max_jovenes, activo)
+         VALUES ($1, $2, $3, $4, true)
+         ON CONFLICT (monitor_id, evento_id)
+         DO UPDATE SET max_jovenes = EXCLUDED.max_jovenes,
+                       enlace_token = EXCLUDED.enlace_token,
+                       activo = true`,
+        [monitor.id, monitor.evento_id, monitor.enlace_token, max_jovenes ?? null]
+      );
+    }
+
+    res.status(201).json({ mensaje: 'Asignación creada', data: monitor });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/admin/monitores/:monitorId/eventos/:eventoId
+const updateMonitorEventoAssignment = async (req, res, next) => {
+  try {
+    const { monitorId, eventoId } = req.params;
+    const { max_jovenes, activo } = req.body;
+
+    const monitorResult = await pool.query(
+      `SELECT id, usuario_id FROM monitores WHERE id = $1 AND evento_id = $2
+       UNION
+       SELECT id, usuario_id FROM monitores WHERE usuario_id = $1 AND evento_id = $2
+       LIMIT 1`,
+      [monitorId, eventoId]
+    );
+
+    if (!monitorResult.rows.length) {
+      return res.status(404).json({
+        error: { code: 'MONITOR_EVENT_NOT_FOUND', message: 'Assignment not found' },
+      });
+    }
+
+    const monitor = monitorResult.rows[0];
+
+    if (activo !== undefined) {
+      await pool.query('UPDATE monitores SET activo = $1 WHERE id = $2', [Boolean(activo), monitor.id]);
+    }
+
+    if (await hasAsignacionEventosTable()) {
+      await pool.query(
+        `INSERT INTO asignacion_eventos (monitor_id, evento_id, enlace_token, max_jovenes, activo)
+         SELECT m.id, m.evento_id, m.enlace_token, $3, $4
+         FROM monitores m
+         WHERE m.id = $1 AND m.evento_id = $2
+         ON CONFLICT (monitor_id, evento_id)
+         DO UPDATE SET max_jovenes = COALESCE($3, asignacion_eventos.max_jovenes),
+                       activo = COALESCE($4, asignacion_eventos.activo)`,
+        [monitor.id, eventoId, max_jovenes ?? null, activo !== undefined ? Boolean(activo) : null]
+      );
+    }
+
+    res.json({ mensaje: 'Asignación actualizada' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// DELETE /api/admin/monitores/:monitorId/eventos/:eventoId
+const removeMonitorEventoByEvento = async (req, res, next) => {
+  try {
+    const { monitorId, eventoId } = req.params;
+
+    const result = await pool.query(
+      `DELETE FROM monitores
+       WHERE (id = $1 OR usuario_id = $1) AND evento_id = $2
+       RETURNING id, usuario_id, evento_id`,
+      [monitorId, eventoId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({
+        error: { code: 'MONITOR_EVENT_NOT_FOUND', message: 'Assignment not found' },
+      });
+    }
+
+    if (await hasAsignacionEventosTable()) {
+      await pool.query(
+        `DELETE FROM asignacion_eventos
+         WHERE monitor_id = $1 AND evento_id = $2`,
+        [result.rows[0].id, eventoId]
+      );
+    }
+
+    res.json({ mensaje: 'Asignación eliminada', data: result.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/admin/monitores/:monitorId/eventos/:eventoId/revocar-enlace
+const revokeMonitorTokenByEvento = async (req, res, next) => {
+  try {
+    const { monitorId, eventoId } = req.params;
+    const newToken = generateUUID();
+
+    const result = await pool.query(
+      `UPDATE monitores
+       SET enlace_token = $1
+       WHERE (id = $2 OR usuario_id = $2) AND evento_id = $3
+       RETURNING id, usuario_id, evento_id, enlace_token`,
+      [newToken, monitorId, eventoId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({
+        error: { code: 'MONITOR_EVENT_NOT_FOUND', message: 'Assignment not found' },
+      });
+    }
+
+    if (await hasAsignacionEventosTable()) {
+      await pool.query(
+        `UPDATE asignacion_eventos
+         SET enlace_token = $1
+         WHERE monitor_id = $2 AND evento_id = $3`,
+        [newToken, result.rows[0].id, eventoId]
+      );
+    }
+
+    res.json({ mensaje: 'Enlace revocado', data: result.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/admin/monitores/:monitorId/max-jovenes
+const updateMonitorMaxJovenes = async (req, res, next) => {
+  try {
+    const { monitorId } = req.params;
+    const maxJovenes = req.body?.max_jovenes;
+
+    if (maxJovenes !== null && maxJovenes !== undefined && (!Number.isInteger(Number(maxJovenes)) || Number(maxJovenes) < 1)) {
+      return res.status(400).json({
+        error: { code: 'INVALID_MAX_JOVENES', message: 'max_jovenes must be null or integer >= 1' },
+      });
+    }
+
+    if (!(await hasAsignacionEventosTable())) {
+      return res.status(400).json({
+        error: { code: 'UNSUPPORTED', message: 'asignacion_eventos table is not available' },
+      });
+    }
+
+    const result = await pool.query(
+      `UPDATE asignacion_eventos ae
+       SET max_jovenes = $2
+       FROM monitores m
+       WHERE ae.monitor_id = m.id AND (m.id = $1 OR m.usuario_id = $1)
+       RETURNING ae.monitor_id, ae.evento_id, ae.max_jovenes`,
+      [monitorId, maxJovenes === null ? null : Number(maxJovenes)]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({
+        error: { code: 'MONITOR_NOT_FOUND', message: 'Monitor not found' },
+      });
+    }
+
+    res.json({ mensaje: 'max_jovenes actualizado', data: result.rows, total: result.rows.length });
   } catch (err) {
     next(err);
   }
@@ -977,6 +1265,12 @@ module.exports = {
   getUsuarioEventos,
   assignMonitorEvento,
   removeMonitorEvento,
+  getMonitorEventos,
+  assignMonitorEventoByPath,
+  updateMonitorEventoAssignment,
+  removeMonitorEventoByEvento,
+  revokeMonitorTokenByEvento,
+  updateMonitorMaxJovenes,
   revokeMonitorToken,
   getRegistrationLinks,
   getJovenes,

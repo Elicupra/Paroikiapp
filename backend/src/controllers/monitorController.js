@@ -1,5 +1,24 @@
 const pool = require('../models/db');
 
+let hasAsignacionEventosTableCache = null;
+
+const hasAsignacionEventosTable = async () => {
+  if (hasAsignacionEventosTableCache !== null) {
+    return hasAsignacionEventosTableCache;
+  }
+
+  const result = await pool.query(
+    `SELECT 1
+     FROM information_schema.tables
+     WHERE table_schema = current_schema()
+       AND table_name = 'asignacion_eventos'
+     LIMIT 1`
+  );
+
+  hasAsignacionEventosTableCache = result.rows.length > 0;
+  return hasAsignacionEventosTableCache;
+};
+
 const getEffectiveUserId = (req) => req.user.simulatedUserId || req.user.userId;
 
 // GET /api/monitor/jovenes - Listar jóvenes del monitor
@@ -268,13 +287,25 @@ const getResumenEvento = async (req, res, next) => {
       });
     }
 
+    const withAsignaciones = await hasAsignacionEventosTable();
     const monitorResult = await pool.query(
-      `SELECT m.id as monitor_id, e.id as evento_id, e.precio_base,
-              COALESCE(ec.descuento_global, 0) as descuento_global
-       FROM monitores m
-       JOIN eventos e ON e.id = m.evento_id
-       LEFT JOIN evento_config ec ON ec.evento_id = e.id
-       WHERE m.usuario_id = $1 AND m.evento_id = $2 AND m.activo = true`,
+      withAsignaciones
+        ? `SELECT m.id as monitor_id, e.id as evento_id, e.precio_base,
+                  COALESCE(ec.descuento_global, 0) as descuento_global,
+                  ae.max_jovenes
+           FROM monitores m
+           JOIN eventos e ON e.id = m.evento_id
+           LEFT JOIN evento_config ec ON ec.evento_id = e.id
+           LEFT JOIN asignacion_eventos ae ON ae.monitor_id = m.id AND ae.evento_id = e.id
+           WHERE m.usuario_id = $1 AND m.evento_id = $2 AND m.activo = true
+             AND (ae.activo = true OR ae.activo IS NULL)`
+        : `SELECT m.id as monitor_id, e.id as evento_id, e.precio_base,
+                  COALESCE(ec.descuento_global, 0) as descuento_global,
+                  NULL::int as max_jovenes
+           FROM monitores m
+           JOIN eventos e ON e.id = m.evento_id
+           LEFT JOIN evento_config ec ON ec.evento_id = e.id
+           WHERE m.usuario_id = $1 AND m.evento_id = $2 AND m.activo = true`,
       [userId, evento_id]
     );
 
@@ -287,7 +318,7 @@ const getResumenEvento = async (req, res, next) => {
       });
     }
 
-    const { monitor_id, precio_base, descuento_global } = monitorResult.rows[0];
+    const { monitor_id, precio_base, descuento_global, max_jovenes } = monitorResult.rows[0];
 
     const aggResult = await pool.query(
       `SELECT COUNT(DISTINCT j.id)::int as total_jovenes,
@@ -300,7 +331,7 @@ const getResumenEvento = async (req, res, next) => {
     );
 
     const totals = aggResult.rows[0];
-    const maxJovenes = 10;
+    const maxJovenes = Number.isInteger(Number(max_jovenes)) && Number(max_jovenes) > 0 ? Number(max_jovenes) : 10;
     const presupuestoEsperado = (Number(precio_base || 0) * maxJovenes) - (Number(descuento_global || 0) * Math.max(1, Number(totals.total_jovenes || 0)));
 
     res.json({
