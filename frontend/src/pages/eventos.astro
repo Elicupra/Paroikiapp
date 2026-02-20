@@ -1,5 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 ---
 
 <Layout title="Gestión de Eventos">
@@ -130,9 +132,8 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </div>
 
-  <script>
+  <script define:vars={{ API_URL }}>
     // @ts-nocheck
-    const API_URL = 'http://localhost:3001';
     const accessToken = localStorage.getItem('accessToken');
 
     if (!accessToken) {
@@ -142,6 +143,15 @@ import Layout from '../layouts/Layout.astro';
     let currentTab = 'activos';
     let eventos = [];
     let editingEventoId = null;
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
 
     // Elementos del DOM
     const modal = document.getElementById('modalEvento');
@@ -214,20 +224,24 @@ import Layout from '../layouts/Layout.astro';
         const fechaInicio = evento.fecha_inicio ? new Date(evento.fecha_inicio).toLocaleDateString('es-ES') : 'N/A';
         const fechaFin = evento.fecha_fin ? new Date(evento.fecha_fin).toLocaleDateString('es-ES') : 'N/A';
         const precio = evento.precio_base ? `€${parseFloat(evento.precio_base).toFixed(2)}` : 'N/A';
+        const nombre = escapeHtml(evento.nombre);
+        const tipo = escapeHtml(evento.tipo);
+        const descripcion = escapeHtml(evento.descripcion);
+        const localizacion = escapeHtml(evento.localizacion);
         
         return `
           <div style="background: white; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;">
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.5rem; color: white;">
-              <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem;">${evento.nombre}</h3>
+              <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem;">${nombre}</h3>
               <span style="display: inline-block; background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.875rem; text-transform: capitalize;">
-                ${evento.tipo}
+                ${tipo}
               </span>
             </div>
             <div style="padding: 1.5rem;">
-              ${evento.descripcion ? `<p style="color: #6b7280; margin: 0 0 1rem 0; line-height: 1.5;">${evento.descripcion}</p>` : ''}
+              ${evento.descripcion ? `<p style="color: #6b7280; margin: 0 0 1rem 0; line-height: 1.5;">${descripcion}</p>` : ''}
               
               <div style="display: grid; gap: 0.5rem; font-size: 0.9rem;">
-                ${evento.localizacion ? `<p style="margin: 0; color: #374151;"><strong>📍 Localización:</strong> ${evento.localizacion}</p>` : ''}
+                ${evento.localizacion ? `<p style="margin: 0; color: #374151;"><strong>📍 Localización:</strong> ${localizacion}</p>` : ''}
                 <p style="margin: 0; color: #374151;"><strong>💰 Precio:</strong> ${precio}</p>
                 <p style="margin: 0; color: #374151;"><strong>📊 Esperado:</strong> €${parseFloat(evento.total_esperado || 0).toFixed(2)}</p>
                 <p style="margin: 0; color: #374151;"><strong>✅ Pagado:</strong> €${parseFloat(evento.total_pagado || 0).toFixed(2)}</p>

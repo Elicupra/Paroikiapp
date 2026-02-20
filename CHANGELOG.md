@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [1.0.1] - 2026-02-20
+
+### Corregido
+- Frontend de eventos usa `PUBLIC_API_URL` en lugar de URL hardcodeada para evitar entornos rotos por configuración fija.
+- Renderizado de tarjetas en `eventos.astro` con escape de contenido para reducir riesgo de XSS en campos de evento.
+
+### Seguridad
+- Subida de documentos endurecida: nombre de archivo aleatorio UUID y validación de tipo real con `file-type`.
+- Almacenamiento de documentos con MIME detectado realmente cuando está disponible.
+- Descarga de documentos protegida contra path traversal validando que la ruta resuelta queda dentro de `UPLOADS_PATH`.
+
 ## [1.0.0] - 2026-02-19
 
 ### Agregado

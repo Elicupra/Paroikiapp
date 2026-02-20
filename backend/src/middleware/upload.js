@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const { randomUUID } = require('crypto');
 
 const uploadsBase = process.env.UPLOADS_PATH || path.join(__dirname, '..', '..', 'uploads');
 
@@ -16,8 +17,7 @@ const storage = multer.diskStorage({
     cb(null, folder);
   },
   filename: (req, file, cb) => {
-    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-    cb(null, `${Date.now()}_${safeName}`);
+    cb(null, randomUUID());
   },
 });
 
@@ -35,7 +35,59 @@ const uploadJovenDocumento = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
+const validateRealFileType = async (req, res, next) => {
+  try {
+    if (!req.file?.path) {
+      return next();
+    }
+
+    const allowedMimeTypes = new Set([
+      'application/pdf',
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'text/plain',
+    ]);
+
+    const { fileTypeFromFile } = await import('file-type');
+    const detected = await fileTypeFromFile(req.file.path);
+
+    let realMimeType = detected?.mime;
+    if (!realMimeType) {
+      const ext = path.extname(req.file.originalname || '').toLowerCase();
+      if ((req.file.mimetype === 'text/plain' || req.file.mimetype === 'application/octet-stream') && ext === '.txt') {
+        realMimeType = 'text/plain';
+      }
+    }
+
+    if (!realMimeType || !allowedMimeTypes.has(realMimeType)) {
+      fs.unlink(req.file.path, () => {});
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_FILE_TYPE',
+          message: 'Formato no permitido. Solo PDF, JPEG, PNG, WEBP o TXT',
+        },
+      });
+    }
+
+    req.file.detectedMimeType = realMimeType;
+    next();
+  } catch (error) {
+    if (req.file?.path) {
+      fs.unlink(req.file.path, () => {});
+    }
+
+    return res.status(400).json({
+      error: {
+        code: 'INVALID_FILE_TYPE',
+        message: 'No se pudo validar el tipo de archivo',
+      },
+    });
+  }
+};
+
 module.exports = {
   uploadsBase,
   uploadJovenDocumento,
+  validateRealFileType,
 };

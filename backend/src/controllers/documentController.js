@@ -52,7 +52,17 @@ const getDocument = async (req, res, next) => {
     }
 
     // Construir ruta del archivo
-    const filePath = path.join(process.env.UPLOADS_PATH || '/data/uploads', doc.ruta_interna);
+    const uploadsRoot = path.resolve(process.env.UPLOADS_PATH || '/data/uploads');
+    const filePath = path.resolve(uploadsRoot, doc.ruta_interna);
+
+    if (filePath !== uploadsRoot && !filePath.startsWith(`${uploadsRoot}${path.sep}`)) {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_DOCUMENT_PATH',
+          message: 'Invalid document path',
+        },
+      });
+    }
 
     // Verificar que el archivo existe
     if (!fs.existsSync(filePath)) {

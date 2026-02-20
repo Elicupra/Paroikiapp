@@ -274,13 +274,14 @@ const uploadDocument = async (req, res, next) => {
 
     const { nombre: jovenNombre, evento_nombre: eventoNombre, email: monitorEmail, nombre_mostrado } = jovenResult.rows[0];
     const rutaInterna = `${jovenId}/${req.file.filename}`;
+    const mimeType = req.file.detectedMimeType || req.file.mimetype;
 
     // Guardar documento en BD
     const docResult = await pool.query(
       `INSERT INTO documentos (joven_id, tipo, ruta_interna, nombre_original, mime_type, tamaño_bytes)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, subido_en`,
-      [jovenId, tipo, rutaInterna, req.file.originalname, req.file.mimetype, req.file.size]
+      [jovenId, tipo, rutaInterna, req.file.originalname, mimeType, req.file.size]
     );
 
     const doc = docResult.rows[0];
@@ -344,12 +345,13 @@ const uploadDocumentByAccess = async (req, res, next) => {
 
     const jovenId = accessResult.rows[0].joven_id;
     const rutaInterna = `${jovenId}/${req.file.filename}`;
+    const mimeType = req.file.detectedMimeType || req.file.mimetype;
 
     const docResult = await pool.query(
       `INSERT INTO documentos (joven_id, tipo, ruta_interna, nombre_original, mime_type, tamaño_bytes)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, subido_en`,
-      [jovenId, tipo, rutaInterna, req.file.originalname, req.file.mimetype, req.file.size]
+      [jovenId, tipo, rutaInterna, req.file.originalname, mimeType, req.file.size]
     );
 
     res.status(201).json({
