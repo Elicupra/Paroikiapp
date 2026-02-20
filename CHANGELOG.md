@@ -1,5 +1,80 @@
 # CHANGELOG
 
+## [1.3.7] - 2026-02-20
+
+### Corregido
+- `eventos.astro`: acciones dinámicas (`Editar`, `Descuento`, `Desactivar`) migradas a delegación por `data-*` para evitar errores de parseo en navegador como `Unexpected token ':'`.
+- `admin.astro`: acceso reforzado a gestión de eventos/usuarios con enlaces directos a `/eventos` y `/usuarios`, y carga de recaudación por evento con fallback seguro.
+- `usuarios.astro`: acciones de asignación de eventos migradas a delegación de eventos y renderizado escapado para evitar errores por interpolación.
+- `monitor.astro` y `admin.astro`: habilitada visualización de perfil completo de joven (documentos y pagos) desde panel de gestión.
+
+### Modificado
+- `registerController.js`: el enlace personal de acceso del joven pasa a usar `/ficha/:token`.
+- `register.astro`: flujo de alta mejorado para mostrar y copiar enlace personal, evitando redirección inmediata y permitiendo subida opcional de documentos al finalizar registro.
+- `upload.js`: filtro inicial ampliado para aceptar `text/plain` y `application/octet-stream`, manteniendo validación de tipo real posterior.
+
+### Agregado
+- Nueva página de ficha personal: `frontend/src/pages/ficha/[token].astro` con lectura, edición y gestión de documentos por token.
+- Endpoint admin para perfil de joven: `GET /api/admin/jovenes/:jovenId/perfil`.
+- Smoke test de regresión de flujo joven/ficha/documentos/perfiles en `test/smoke-youth-flow.js`.
+
+### Requisitos
+- Backend admin amplía gestión de jóvenes con operaciones directas: `POST/PATCH/DELETE /api/admin/jovenes`.
+- Backend monitor permite edición básica de jóvenes asignados: `PATCH /api/monitor/jovenes/:jovenId`.
+- Backend auth amplía perfil propio: `PATCH /api/auth/me/profile` (nombre mostrado), junto a rutas existentes de correo y contraseña.
+- `monitorController.getJovenes` corrige listado para incluir jóvenes de todas las asignaciones/eventos activos del monitor.
+- `monitor.astro` incorpora navegación/operaciones de perfil del monitor (nombre, correo, credenciales) y edición rápida de joven en modal.
+- Nueva suite de verificación por rol en `test/smoke-role-requirements.js` y script `npm run smoke:roles`.
+
+## [1.3.6] - 2026-02-20
+
+### Agregado
+- Workflow CI `Smoke API` en `.github/workflows/smoke-api.yml` ejecutado en `push` y `pull_request`.
+- El pipeline levanta PostgreSQL de servicio, prepara schema/`pgcrypto`, ejecuta `migrate` + `seed` y corre `npm run smoke:api`.
+
+## [1.3.5] - 2026-02-20
+
+### Modificado
+- `smoke-admin-assignments.js` ampliado para cubrir ciclo completo de asignación monitor↔evento: crear evento temporal, asignar, actualizar por evento, revocar enlace, eliminar asignación por evento y verificar que desaparece del listado.
+
+## [1.3.4] - 2026-02-20
+
+### Agregado
+- Suite smoke de API para regresión en endpoints críticos de admin/eventos y asignación monitor↔evento: `test/smoke-admin-assignments.js`.
+- Runner dedicado para ejecutar smoke con backend reutilizado o autoarrancado: `test/run-smoke-api.js`.
+- Scripts raíz: `npm run smoke:api` y `npm run smoke:api:only`.
+
+## [1.3.3] - 2026-02-20
+
+### Corregido
+- `admin.astro`: carga de eventos endurecida para evitar bloqueos en "Cargando" al consultar recaudación por evento (timeouts y `Promise.allSettled`).
+- `usuarios.astro`: migrado a `PUBLIC_API_URL` para que la asignación de monitores a eventos funcione en entornos no-localhost.
+
+## [1.3.2] - 2026-02-20
+
+### Modificado
+- `admin.astro` usa `PUBLIC_API_URL` en lugar de URL hardcodeada para compatibilidad por entorno.
+- Se integra recaudación por evento consumiendo `GET /api/admin/eventos/:eventoId/recaudacion` con fallback al agregado legado del listado.
+- Enlaces de registro muestran `max_jovenes` cuando está disponible.
+
+### Seguridad
+- Escape de contenido dinámico en tablas/listados del panel admin para reducir riesgo de XSS.
+
+## [1.3.1] - 2026-02-20
+
+### Modificado
+- `monitor.astro` conectado a `GET /api/monitor/eventos` y `GET /api/monitor/eventos/:eventoId/recaudacion` con fallback automático a endpoints legacy.
+- `monitor.astro` usa `PUBLIC_API_URL` en lugar de URL hardcodeada para mantener compatibilidad por entorno.
+
+## [1.3.0] - 2026-02-20
+
+### Agregado
+- Endpoints de monitor para eventos y recaudación: `GET /api/monitor/eventos` y `GET /api/monitor/eventos/:eventoId/recaudacion`.
+- Endpoint admin de recaudación por evento: `GET /api/admin/eventos/:eventoId/recaudacion`.
+
+### Modificado
+- Cálculo de recaudación y eventos asignados usa `asignacion_eventos` cuando existe y mantiene fallback al modelo legado.
+
 ## [1.2.0] - 2026-02-20
 
 ### Agregado

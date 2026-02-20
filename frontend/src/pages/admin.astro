@@ -1,5 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 ---
 
 <Layout title="Panel de Administrador">
@@ -27,13 +29,15 @@ import Layout from "../layouts/Layout.astro";
       <div style="background: white; padding: 1.5rem; border-radius: 0.5rem;">
         <h3>Eventos</h3>
         <div id="eventosCount" style="font-size: 2rem; color: var(--color-primary);">-</div>
-        <button onclick="window.showSection('eventos')" style="width: 100%; padding: 0.75rem; background-color: var(--color-primary); color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Ver Eventos</button>
+        <button onclick="window.showSection('eventos')" style="width: 100%; padding: 0.75rem; background-color: var(--color-primary); color: white; border: none; border-radius: 0.25rem; cursor: pointer; margin-bottom:0.5rem;">Ver Eventos</button>
+        <a href="/eventos" style="display:block; text-align:center; width: 100%; padding: 0.65rem; background:#1d4ed8; color: white; border-radius: 0.25rem; text-decoration:none;">Ir a gestión de eventos</a>
       </div>
 
       <div style="background: white; padding: 1.5rem; border-radius: 0.5rem;">
         <h3>Usuarios</h3>
         <div id="usuariosCount" style="font-size: 2rem; color: var(--color-primary);">-</div>
-        <button onclick="window.showSection('usuarios')" style="width: 100%; padding: 0.75rem; background-color: var(--color-primary); color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Ver Usuarios</button>
+        <button onclick="window.showSection('usuarios')" style="width: 100%; padding: 0.75rem; background-color: var(--color-primary); color: white; border: none; border-radius: 0.25rem; cursor: pointer; margin-bottom:0.5rem;">Ver Usuarios</button>
+        <a href="/usuarios" style="display:block; text-align:center; width: 100%; padding: 0.65rem; background:#1d4ed8; color: white; border-radius: 0.25rem; text-decoration:none;">Ir a gestión de usuarios</a>
       </div>
 
       <div style="background: white; padding: 1.5rem; border-radius: 0.5rem;">
@@ -51,14 +55,42 @@ import Layout from "../layouts/Layout.astro";
 
     <div id="sectionContent" style="margin-top: 3rem;"></div>
     <div id="message"></div>
+
+    <div id="jovenPerfilModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; overflow-y: auto;">
+      <div style="min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 2rem;">
+        <div style="background: white; border-radius: 0.75rem; max-width: 900px; width: 100%; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+          <div style="padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between;">
+            <h3 style="margin: 0;">Perfil del joven</h3>
+            <button id="closeJovenPerfilModal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+          </div>
+          <div id="jovenPerfilBody" style="padding: 1.25rem;"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <script>
+  <script define:vars={{ API_URL }}>
     // @ts-nocheck
     // Hacer funciones globales
-    const API_URL = 'http://localhost:3001';
     window.accessToken = localStorage.getItem('accessToken');
     window.messageEl = document.getElementById('message');
+
+    const escapeHtml = (value) => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 7000) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(url, { ...options, signal: controller.signal });
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
 
     if (!window.accessToken) {
       window.location.href = '/login';
@@ -87,6 +119,12 @@ import Layout from "../layouts/Layout.astro";
     const simStatus = document.getElementById('simStatus');
     const btnSimular = document.getElementById('btnSimular');
     const btnSalirSimulacion = document.getElementById('btnSalirSimulacion');
+    const jovenPerfilModal = document.getElementById('jovenPerfilModal');
+    const jovenPerfilBody = document.getElementById('jovenPerfilBody');
+
+    document.getElementById('closeJovenPerfilModal').onclick = () => {
+      jovenPerfilModal.style.display = 'none';
+    };
 
     function updateSimStatus() {
       const saved = localStorage.getItem(simKey);
@@ -153,13 +191,32 @@ import Layout from "../layouts/Layout.astro";
 
     window.loadEventos = async function() {
       try {
-        const response = await fetch(`${API_URL}/api/admin/eventos`, {
+        const response = await fetchWithTimeout(`${API_URL}/api/admin/eventos`, {
           headers: { 'Authorization': 'Bearer ' + window.accessToken }
         });
         const data = await response.json();
         
         if (!response.ok) throw new Error(data.error?.message || 'Error al cargar eventos');
         
+        const eventos = data.data || [];
+        const recaudacionByEvento = new Map();
+
+        await Promise.allSettled(eventos.map(async (evento) => {
+          try {
+            const recResponse = await fetchWithTimeout(`${API_URL}/api/admin/eventos/${evento.id}/recaudacion`, {
+              headers: { 'Authorization': 'Bearer ' + window.accessToken }
+            }, 3500);
+
+            if (recResponse.ok) {
+              const recData = await recResponse.json();
+              recaudacionByEvento.set(evento.id, {
+                total_recaudado: Number(recData.data?.total_recaudado || 0),
+                total_esperado: Number(recData.data?.total_esperado || 0),
+              });
+            }
+          } catch (_) {}
+        }));
+
         document.getElementById('eventosCount').textContent = data.total;
         const content = document.getElementById('sectionContent');
         content.innerHTML = '<h3>Eventos</h3>';
@@ -175,18 +232,27 @@ import Layout from "../layouts/Layout.astro";
                 <th style="padding: 0.75rem; text-align: left;">Nombre</th>
                 <th style="padding: 0.75rem; text-align: left;">Tipo</th>
                 <th style="padding: 0.75rem; text-align: left;">Precio</th>
+                <th style="padding: 0.75rem; text-align: left;">Recaudado</th>
+                <th style="padding: 0.75rem; text-align: left;">Esperado</th>
                 <th style="padding: 0.75rem; text-align: left;">Activo</th>
               </tr>
             </thead>
             <tbody>
-              ${data.data.map(e => `
+              ${eventos.map(e => {
+                const recaudacion = recaudacionByEvento.get(e.id);
+                const totalRecaudado = Number(recaudacion?.total_recaudado ?? e.total_pagado ?? 0);
+                const totalEsperado = Number(recaudacion?.total_esperado ?? e.total_esperado ?? 0);
+                return `
                 <tr style="border-bottom: 1px solid #d1d5db;">
-                  <td style="padding: 0.75rem;">${e.nombre}</td>
-                  <td style="padding: 0.75rem;">${e.tipo}</td>
+                  <td style="padding: 0.75rem;">${escapeHtml(e.nombre)}</td>
+                  <td style="padding: 0.75rem;">${escapeHtml(e.tipo_evento_nombre || e.tipo)}</td>
                   <td style="padding: 0.75rem;">€${e.precio_base || '-'}</td>
+                  <td style="padding: 0.75rem;">€${totalRecaudado.toFixed(2)}</td>
+                  <td style="padding: 0.75rem;">€${totalEsperado.toFixed(2)}</td>
                   <td style="padding: 0.75rem;">${e.activo ? 'Sí' : 'No'}</td>
                 </tr>
-              `).join('')}
+              `;
+              }).join('')}
             </tbody>
           `;
           content.appendChild(table);
@@ -224,9 +290,9 @@ import Layout from "../layouts/Layout.astro";
           <tbody>
             ${data.data.map(u => `
               <tr style="border-bottom: 1px solid #d1d5db;">
-                <td style="padding: 0.75rem;">${u.email}</td>
-                <td style="padding: 0.75rem;">${u.nombre_mostrado}</td>
-                <td style="padding: 0.75rem;">${u.rol}</td>
+                <td style="padding: 0.75rem;">${escapeHtml(u.email)}</td>
+                <td style="padding: 0.75rem;">${escapeHtml(u.nombre_mostrado)}</td>
+                <td style="padding: 0.75rem;">${escapeHtml(u.rol)}</td>
                 <td style="padding: 0.75rem;">${u.activo ? 'Sí' : 'No'}</td>
               </tr>
             `).join('')}
@@ -256,10 +322,10 @@ import Layout from "../layouts/Layout.astro";
           const div = document.createElement('div');
           div.style.cssText = 'background: #f0f9ff; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; border-left: 4px solid #3b82f6;';
           div.innerHTML = `
-            <p style="margin: 0 0 0.25rem 0;"><strong>${link.evento_nombre}</strong></p>
-            <p style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: #666;">Monitor: ${link.monitor_nombre}</p>
-            <input type="text" value="${link.url}" readonly style="width: 100%; padding: 0.5rem; font-size: 0.85rem; margin-bottom: 0.5rem; font-family: monospace;" />
-            <button onclick="window.copyToClipboard('${link.url}')" style="background-color: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer;">Copiar</button>
+            <p style="margin: 0 0 0.25rem 0;"><strong>${escapeHtml(link.evento_nombre)}</strong></p>
+            <p style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: #666;">Monitor: ${escapeHtml(link.monitor_nombre)}${link.max_jovenes ? ` · Cupo: ${link.max_jovenes}` : ''}</p>
+            <input type="text" value="${escapeHtml(link.url)}" readonly style="width: 100%; padding: 0.5rem; font-size: 0.85rem; margin-bottom: 0.5rem; font-family: monospace;" />
+            <button onclick='window.copyToClipboard(${JSON.stringify(link.url)})' style="background-color: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer;">Copiar</button>
           `;
           content.appendChild(div);
         });
@@ -296,16 +362,18 @@ import Layout from "../layouts/Layout.astro";
                 <th style="padding: 0.75rem; text-align: left;">Evento</th>
                 <th style="padding: 0.75rem; text-align: left;">Docs</th>
                 <th style="padding: 0.75rem; text-align: left;">Pagos</th>
+                <th style="padding: 0.75rem; text-align: left;">Acción</th>
               </tr>
             </thead>
             <tbody>
               ${data.data.map(j => `
                 <tr style="border-bottom: 1px solid #d1d5db;">
-                  <td style="padding: 0.75rem;">${j.nombre} ${j.apellidos}</td>
-                  <td style="padding: 0.75rem;">${j.monitor_nombre}</td>
-                  <td style="padding: 0.75rem;">${j.evento_nombre}</td>
+                  <td style="padding: 0.75rem;">${escapeHtml(j.nombre)} ${escapeHtml(j.apellidos)}</td>
+                  <td style="padding: 0.75rem;">${escapeHtml(j.monitor_nombre)}</td>
+                  <td style="padding: 0.75rem;">${escapeHtml(j.evento_nombre)}</td>
                   <td style="padding: 0.75rem;">${j.documentos_count}</td>
                   <td style="padding: 0.75rem;">${j.pagos_count}</td>
+                  <td style="padding: 0.75rem;"><button onclick="window.verPerfilJoven('${j.id}')" style="padding: 0.35rem 0.75rem; background: #2563eb; color: white; border: none; border-radius: 0.35rem; cursor: pointer;">Ver perfil</button></td>
                 </tr>
               `).join('')}
             </tbody>
@@ -315,6 +383,46 @@ import Layout from "../layouts/Layout.astro";
       } catch (error) {
         window.messageEl.className = 'error';
         window.messageEl.textContent = 'Error: ' + error.message;
+      }
+    };
+
+    window.verPerfilJoven = async function(jovenId) {
+      jovenPerfilBody.innerHTML = '<p style="color:#6b7280;">Cargando perfil...</p>';
+      jovenPerfilModal.style.display = 'block';
+
+      try {
+        const response = await fetch(`${API_URL}/api/admin/jovenes/${jovenId}/perfil`, {
+          headers: { 'Authorization': 'Bearer ' + window.accessToken }
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error?.message || 'Error al cargar perfil');
+        }
+
+        const joven = data.data?.joven;
+        const documentos = data.data?.documentos || [];
+        const pagos = data.data?.pagos || [];
+
+        jovenPerfilBody.innerHTML = `
+          <div style="display:grid; gap:1rem;">
+            <div style="background:#f8fafc; padding:1rem; border-radius:0.5rem; border:1px solid #e5e7eb;">
+              <h4 style="margin:0 0 0.5rem 0;">${escapeHtml(joven.nombre)} ${escapeHtml(joven.apellidos)}</h4>
+              <p style="margin:0.25rem 0; color:#374151;"><strong>Evento:</strong> ${escapeHtml(joven.evento_nombre)}</p>
+              <p style="margin:0.25rem 0; color:#374151;"><strong>Monitor:</strong> ${escapeHtml(joven.monitor_nombre)}</p>
+            </div>
+            <div style="background:#fff; padding:1rem; border-radius:0.5rem; border:1px solid #e5e7eb;">
+              <h4 style="margin:0 0 0.75rem 0;">Documentos</h4>
+              ${documentos.length ? documentos.map((doc) => `<div style="padding:0.5rem 0; border-bottom:1px solid #f1f5f9;"><strong>${escapeHtml(doc.tipo)}</strong> · ${escapeHtml(doc.nombre_original || 'archivo')} · ${doc.validado ? 'Validado' : 'Pendiente'}</div>`).join('') : '<p style="margin:0; color:#6b7280;">Sin documentos</p>'}
+            </div>
+            <div style="background:#fff; padding:1rem; border-radius:0.5rem; border:1px solid #e5e7eb;">
+              <h4 style="margin:0 0 0.75rem 0;">Pagos</h4>
+              ${pagos.length ? pagos.map((p) => `<div style="padding:0.5rem 0; border-bottom:1px solid #f1f5f9;">Plazo ${p.plazo_numero} · €${Number(p.cantidad || 0).toFixed(2)} · ${p.pagado ? 'Pagado' : 'Pendiente'}</div>`).join('') : '<p style="margin:0; color:#6b7280;">Sin pagos</p>'}
+            </div>
+          </div>
+        `;
+      } catch (error) {
+        jovenPerfilBody.innerHTML = `<p style="color:#b91c1c;">${escapeHtml(error.message)}</p>`;
       }
     };
 

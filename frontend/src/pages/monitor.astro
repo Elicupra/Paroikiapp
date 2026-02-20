@@ -1,5 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 ---
 
 <Layout title="Panel de Monitor">
@@ -15,6 +17,36 @@ import Layout from "../layouts/Layout.astro";
           <strong>Simulando monitor:</strong> <span id="simMonitorName">-</span>
         </div>
         <button id="btnSalirSimulacionMonitor" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer;">Salir de simulacion</button>
+      </div>
+    </div>
+
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem 1.25rem; margin-bottom: 2rem;">
+      <h3 style="margin: 0 0 1rem 0;">Mi perfil</h3>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+        <form id="monitorProfileForm" style="border:1px solid #e5e7eb; border-radius:0.5rem; padding:0.75rem;">
+          <h4 style="margin:0 0 0.75rem 0;">Datos de perfil</h4>
+          <label for="profile_nombre" style="display:block; margin-bottom:0.35rem;">Nombre mostrado</label>
+          <input id="profile_nombre" type="text" required style="width:100%; margin-bottom:0.75rem;" />
+          <button type="submit" style="width:100%;">Guardar perfil</button>
+        </form>
+
+        <form id="monitorEmailForm" style="border:1px solid #e5e7eb; border-radius:0.5rem; padding:0.75rem;">
+          <h4 style="margin:0 0 0.75rem 0;">Cambiar correo</h4>
+          <label for="profile_email" style="display:block; margin-bottom:0.35rem;">Nuevo email</label>
+          <input id="profile_email" type="email" required style="width:100%; margin-bottom:0.5rem;" />
+          <label for="profile_email_password" style="display:block; margin-bottom:0.35rem;">Contraseña actual</label>
+          <input id="profile_email_password" type="password" required style="width:100%; margin-bottom:0.75rem;" />
+          <button type="submit" style="width:100%;">Actualizar correo</button>
+        </form>
+
+        <form id="monitorPasswordForm" style="border:1px solid #e5e7eb; border-radius:0.5rem; padding:0.75rem;">
+          <h4 style="margin:0 0 0.75rem 0;">Cambiar contraseña</h4>
+          <label for="profile_current_password" style="display:block; margin-bottom:0.35rem;">Contraseña actual</label>
+          <input id="profile_current_password" type="password" required style="width:100%; margin-bottom:0.5rem;" />
+          <label for="profile_new_password" style="display:block; margin-bottom:0.35rem;">Nueva contraseña</label>
+          <input id="profile_new_password" type="password" minlength="8" required style="width:100%; margin-bottom:0.75rem;" />
+          <button type="submit" style="width:100%;">Actualizar contraseña</button>
+        </form>
       </div>
     </div>
 
@@ -47,6 +79,18 @@ import Layout from "../layouts/Layout.astro";
 
       <h3 style="margin-top: 2rem;">Jóvenes Registrados</h3>
       <div id="jovenesList" style="margin: 1rem 0;"></div>
+
+      <div id="jovenPerfilModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; overflow-y: auto;">
+        <div style="min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 2rem;">
+          <div style="background: white; border-radius: 0.75rem; max-width: 900px; width: 100%; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+            <div style="padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between;">
+              <h3 style="margin: 0;">Perfil del joven</h3>
+              <button id="closeJovenPerfilModal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <div id="jovenPerfilBody" style="padding: 1.25rem;"></div>
+          </div>
+        </div>
+      </div>
 
       <h3 style="margin-top: 2rem;">Documentos del joven seleccionado</h3>
       <div id="documentosJoven" style="margin: 1rem 0;"></div>
@@ -118,7 +162,7 @@ import Layout from "../layouts/Layout.astro";
     </div> <!-- Cierra eventContent -->
   </div> <!-- Cierra container principal -->
 
-  <script>
+  <script define:vars={{ API_URL }}>
     // @ts-nocheck
     // Capturar todos los errores
     window.onerror = function(msg, url, lineNo, columnNo, error) {
@@ -131,11 +175,10 @@ import Layout from "../layouts/Layout.astro";
 
     console.log('[INIT] Monitor script iniciado');
     
-    // Obtener API_URL desde meta env o usar default
-    const API_URL = 'http://localhost:3001';
     console.log('[CONFIG] API_URL:', API_URL);
     
     const accessToken = localStorage.getItem('accessToken');
+    const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
     console.log('[AUTH] AccessToken existe:', !!accessToken);
     
     const messageEl = document.getElementById('message');
@@ -144,6 +187,21 @@ import Layout from "../layouts/Layout.astro";
     const simKey = 'simulatedMonitor';
     let simulatedMonitor = null;
     const simRaw = localStorage.getItem(simKey);
+    const jovenPerfilModal = document.getElementById('jovenPerfilModal');
+    const jovenPerfilBody = document.getElementById('jovenPerfilBody');
+
+    document.getElementById('closeJovenPerfilModal').onclick = () => {
+      jovenPerfilModal.style.display = 'none';
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
     if (simRaw) {
       try {
         simulatedMonitor = JSON.parse(simRaw);
@@ -186,44 +244,143 @@ import Layout from "../layouts/Layout.astro";
 
     updateSimulationBanner();
 
+    function updateCurrentUserStorage(nextUserData) {
+      const merged = Object.assign({}, currentUser || {}, nextUserData || {});
+      localStorage.setItem('user', JSON.stringify(merged));
+    }
+
+    if (currentUser?.nombre_mostrado) {
+      const profileNombre = document.getElementById('profile_nombre');
+      if (profileNombre) profileNombre.value = currentUser.nombre_mostrado;
+    }
+
+    document.getElementById('monitorProfileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const nombre_mostrado = document.getElementById('profile_nombre').value.trim();
+        const response = await fetch(`${API_URL}/api/auth/me/profile`, {
+          method: 'PATCH',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ nombre_mostrado }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || 'Error al actualizar perfil');
+
+        updateCurrentUserStorage(data.user);
+        messageEl.className = 'success';
+        messageEl.textContent = 'Perfil actualizado correctamente';
+      } catch (error) {
+        messageEl.className = 'error';
+        messageEl.textContent = 'Error: ' + error.message;
+      }
+    });
+
+    document.getElementById('monitorEmailForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const newEmail = document.getElementById('profile_email').value.trim();
+        const password = document.getElementById('profile_email_password').value;
+
+        const response = await fetch(`${API_URL}/api/auth/me/email`, {
+          method: 'PATCH',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ newEmail, password }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || 'Error al actualizar email');
+
+        updateCurrentUserStorage({ email: newEmail });
+        document.getElementById('profile_email').value = '';
+        document.getElementById('profile_email_password').value = '';
+        messageEl.className = 'success';
+        messageEl.textContent = data.message || 'Correo actualizado correctamente';
+      } catch (error) {
+        messageEl.className = 'error';
+        messageEl.textContent = 'Error: ' + error.message;
+      }
+    });
+
+    document.getElementById('monitorPasswordForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const currentPassword = document.getElementById('profile_current_password').value;
+        const newPassword = document.getElementById('profile_new_password').value;
+
+        const response = await fetch(`${API_URL}/api/auth/me/password`, {
+          method: 'PATCH',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ currentPassword, newPassword }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || 'Error al actualizar contraseña');
+
+        document.getElementById('profile_current_password').value = '';
+        document.getElementById('profile_new_password').value = '';
+        messageEl.className = 'success';
+        messageEl.textContent = data.message || 'Contraseña actualizada correctamente';
+      } catch (error) {
+        messageEl.className = 'error';
+        messageEl.textContent = 'Error: ' + error.message;
+      }
+    });
+
     // Variables globales para eventos
     let selectedEvento = null;
     let availableEventos = [];
+
+    async function loadMonitorEventosFromLinks() {
+      const response = await fetch(`${API_URL}/api/monitor/registration-link`, {
+        headers: getAuthHeaders(),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'Error al cargar enlaces de monitor');
+      }
+
+      const eventosMap = new Map();
+      if (data.data && data.data.length > 0) {
+        data.data.forEach(link => {
+          if (!eventosMap.has(link.evento_id)) {
+            eventosMap.set(link.evento_id, {
+              id: link.evento_id,
+              nombre: link.evento_nombre,
+              tipo: link.tipo || 'N/A',
+            });
+          }
+        });
+      }
+
+      return Array.from(eventosMap.values());
+    }
 
     // Función para cargar eventos del monitor
     async function loadMonitorEventos() {
       console.log('[EVENTOS] Cargando eventos del monitor...');
       try {
-        const response = await fetch(`${API_URL}/api/monitor/registration-link`, {
+        const response = await fetch(`${API_URL}/api/monitor/eventos`, {
           headers: getAuthHeaders(),
         });
 
-        const data = await response.json();
-
-        if (!response.ok) {
+        if (response.ok) {
+          const data = await response.json();
+          availableEventos = (data.data || []).map(evento => ({
+            id: evento.id,
+            nombre: evento.nombre,
+            tipo: evento.tipo || 'N/A',
+          }));
+        } else {
           if (response.status === 401) {
             localStorage.clear();
             window.location.href = '/login';
             return;
           }
-          throw new Error(data.error?.message || 'Error al cargar eventos');
-        }
 
-        // Extraer eventos únicos de los enlaces de registro
-        const eventosMap = new Map();
-        if (data.data && data.data.length > 0) {
-          data.data.forEach(link => {
-            if (!eventosMap.has(link.evento_id)) {
-              eventosMap.set(link.evento_id, {
-                id: link.evento_id,
-                nombre: link.evento_nombre,
-                tipo: link.tipo || 'N/A'
-              });
-            }
-          });
+          availableEventos = await loadMonitorEventosFromLinks();
         }
-
-        availableEventos = Array.from(eventosMap.values());
         console.log('[EVENTOS] Eventos disponibles:', availableEventos.length);
 
         // Verificar si hay evento guardado en localStorage
@@ -260,6 +417,14 @@ import Layout from "../layouts/Layout.astro";
         }
       } catch (error) {
         console.error('[EVENTOS] Error:', error);
+        try {
+          availableEventos = await loadMonitorEventosFromLinks();
+          if (availableEventos.length > 0) {
+            showEventSelector();
+            return;
+          }
+        } catch (_) {}
+
         document.getElementById('eventSelectorContainer').innerHTML = '<p style="color: red; text-align: center; padding: 2rem;">Error al cargar eventos</p>';
         document.getElementById('eventSelectorContainer').style.display = 'block';
       }
@@ -380,7 +545,7 @@ import Layout from "../layouts/Layout.astro";
               div.innerHTML = `
                 <p style="margin: 0 0 0.5rem 0;"><strong>${link.evento_nombre}</strong></p>
                 <input type="text" value="${link.url}" readonly style="width: 100%; padding: 0.5rem; font-size: 0.9rem; margin-bottom: 0.5rem;" />
-                <button onclick="window.copyToClipboard('${link.url}')" style="background-color: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer;">Copiar Enlace</button>
+                <button onclick='window.copyToClipboard(${JSON.stringify(link.url)})' style="background-color: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer;">Copiar Enlace</button>
               `;
               linksContainer.appendChild(div);
             });
@@ -416,13 +581,30 @@ import Layout from "../layouts/Layout.astro";
       container.innerHTML = '<div style="padding: 1rem; background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem;">Cargando resumen...</div>';
 
       try {
-        const response = await fetch(`${API_URL}/api/monitor/resumen?evento_id=${selectedEvento.id}`, {
+        let response = await fetch(`${API_URL}/api/monitor/eventos/${selectedEvento.id}/recaudacion`, {
           headers: getAuthHeaders(),
         });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error?.message || 'Error al cargar resumen');
 
-        const r = data.data;
+        let data = await response.json();
+
+        let r = null;
+        if (response.ok) {
+          r = {
+            total_pagado: Number(data.data?.recaudado || 0),
+            total_presupuesto_esperado: Number(data.data?.esperado || 0),
+            descuento_aplicado: 0,
+            total_jovenes: Number(data.data?.total_jovenes || 0),
+            max_jovenes: data.data?.max_jovenes,
+          };
+        } else {
+          response = await fetch(`${API_URL}/api/monitor/resumen?evento_id=${selectedEvento.id}`, {
+            headers: getAuthHeaders(),
+          });
+          data = await response.json();
+          if (!response.ok) throw new Error(data.error?.message || 'Error al cargar resumen');
+          r = data.data;
+        }
+
         container.innerHTML = `
           <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem;"><strong>Total pagado</strong><div style="font-size: 1.35rem; margin-top: 0.25rem;">€${Number(r.total_pagado || 0).toFixed(2)}</div></div>
           <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem;"><strong>Presupuesto esperado</strong><div style="font-size: 1.35rem; margin-top: 0.25rem;">€${Number(r.total_presupuesto_esperado || 0).toFixed(2)}</div></div>
@@ -560,7 +742,7 @@ import Layout from "../layouts/Layout.astro";
               const div = document.createElement('div');
               div.style.cssText = 'background: white; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; border: 1px solid #e5e7eb;';
               div.innerHTML = `
-                <h4 style="margin: 0 0 0.5rem 0; color: #1f2937;">${joven.nombre} ${joven.apellidos}</h4>
+                <h4 style="margin: 0 0 0.5rem 0; color: #1f2937; cursor:pointer; text-decoration: underline;" onclick="window.verPerfilJoven('${joven.id}')">${escapeHtml(joven.nombre)} ${escapeHtml(joven.apellidos)}</h4>
                 <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">
                   Documentos: ${joven.documentos_count || 0} | 
                   Pagos: ${joven.pagos_count || 0} | 
@@ -607,6 +789,76 @@ import Layout from "../layouts/Layout.astro";
         document.getElementById('joven_id').disabled = true;
       }
     }
+
+    window.verPerfilJoven = async function(jovenId) {
+      jovenPerfilBody.innerHTML = '<p style="color:#6b7280;">Cargando perfil...</p>';
+      jovenPerfilModal.style.display = 'block';
+
+      try {
+        const response = await fetch(`${API_URL}/api/monitor/jovenes/${jovenId}`, {
+          headers: getAuthHeaders(),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || 'Error al cargar perfil');
+
+        const joven = data.joven || {};
+        const documentos = data.documentos || [];
+        const pagos = data.pagos || [];
+
+        jovenPerfilBody.innerHTML = `
+          <div style="display:grid; gap:1rem;">
+            <div style="background:#f8fafc; padding:1rem; border-radius:0.5rem; border:1px solid #e5e7eb;">
+              <h4 style="margin:0 0 0.5rem 0;">${escapeHtml(joven.nombre)} ${escapeHtml(joven.apellidos)}</h4>
+              <p style="margin:0; color:#374151;"><strong>ID:</strong> ${escapeHtml(joven.id)}</p>
+              <div style="display:grid; gap:0.5rem; margin-top:0.75rem; grid-template-columns: 1fr 1fr auto; align-items:end;">
+                <div>
+                  <label style="display:block; font-size:0.85rem; color:#6b7280; margin-bottom:0.25rem;">Nombre</label>
+                  <input id="editJovenNombre" value="${escapeHtml(joven.nombre || '')}" style="width:100%;" />
+                </div>
+                <div>
+                  <label style="display:block; font-size:0.85rem; color:#6b7280; margin-bottom:0.25rem;">Apellidos</label>
+                  <input id="editJovenApellidos" value="${escapeHtml(joven.apellidos || '')}" style="width:100%;" />
+                </div>
+                <button type="button" onclick="window.actualizarJovenDesdePerfil('${jovenId}')" style="height:38px; background:#2563eb; color:white; border:none; border-radius:0.35rem; padding:0 0.75rem;">Guardar</button>
+              </div>
+            </div>
+            <div style="background:#fff; padding:1rem; border-radius:0.5rem; border:1px solid #e5e7eb;">
+              <h4 style="margin:0 0 0.75rem 0;">Documentos</h4>
+              ${documentos.length ? documentos.map((doc) => `<div style="padding:0.5rem 0; border-bottom:1px solid #f1f5f9;"><strong>${escapeHtml(doc.tipo)}</strong> · ${escapeHtml(doc.nombre_original || 'archivo')}</div>`).join('') : '<p style="margin:0; color:#6b7280;">Sin documentos</p>'}
+            </div>
+            <div style="background:#fff; padding:1rem; border-radius:0.5rem; border:1px solid #e5e7eb;">
+              <h4 style="margin:0 0 0.75rem 0;">Pagos</h4>
+              ${pagos.length ? pagos.map((p) => `<div style="padding:0.5rem 0; border-bottom:1px solid #f1f5f9;">Plazo ${p.plazo_numero} · €${Number(p.cantidad || 0).toFixed(2)} · ${p.pagado ? 'Pagado' : 'Pendiente'}</div>`).join('') : '<p style="margin:0; color:#6b7280;">Sin pagos</p>'}
+            </div>
+          </div>
+        `;
+      } catch (error) {
+        jovenPerfilBody.innerHTML = `<p style="color:#b91c1c;">${escapeHtml(error.message)}</p>`;
+      }
+    };
+
+    window.actualizarJovenDesdePerfil = async function(jovenId) {
+      try {
+        const nombre = document.getElementById('editJovenNombre')?.value?.trim();
+        const apellidos = document.getElementById('editJovenApellidos')?.value?.trim();
+
+        const response = await fetch(`${API_URL}/api/monitor/jovenes/${jovenId}`, {
+          method: 'PATCH',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ nombre, apellidos }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || 'Error al actualizar joven');
+
+        messageEl.className = 'success';
+        messageEl.textContent = data.mensaje || 'Joven actualizado';
+        loadJovenes();
+        window.verPerfilJoven(jovenId);
+      } catch (error) {
+        messageEl.className = 'error';
+        messageEl.textContent = 'Error: ' + error.message;
+      }
+    };
 
     document.getElementById('pagoForm').addEventListener('submit', async (e) => {
       e.preventDefault();

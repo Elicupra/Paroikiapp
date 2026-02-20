@@ -542,6 +542,85 @@ const getEventoJovenes = async (req, res, next) => {
   }
 };
 
+// GET /api/admin/eventos/:eventoId/recaudacion
+const getEventoRecaudacionAdmin = async (req, res, next) => {
+  try {
+    const { eventoId } = req.params;
+    const withAsignaciones = await hasAsignacionEventosTable();
+
+    const eventoResult = await pool.query(
+      `SELECT e.id, e.precio_base, COALESCE(ec.descuento_global, 0) as descuento_global
+       FROM eventos e
+       LEFT JOIN evento_config ec ON ec.evento_id = e.id
+       WHERE e.id = $1`,
+      [eventoId]
+    );
+
+    if (!eventoResult.rows.length) {
+      return res.status(404).json({
+        error: {
+          code: 'EVENTO_NOT_FOUND',
+          message: 'Evento not found',
+        },
+      });
+    }
+
+    const { precio_base, descuento_global } = eventoResult.rows[0];
+    const precioEfectivo = Math.max(0, Number(precio_base || 0) - Number(descuento_global || 0));
+
+    const porMonitor = await pool.query(
+      withAsignaciones
+        ? `SELECT m.id as monitor_id, u.nombre_mostrado,
+                  COUNT(DISTINCT j.id)::int as total_jovenes,
+                  COALESCE(SUM(CASE WHEN p.pagado = true THEN p.cantidad - COALESCE(p.descuento, 0) ELSE 0 END), 0) as recaudado
+           FROM asignacion_eventos ae
+           JOIN monitores m ON m.id = ae.monitor_id
+           JOIN usuarios u ON u.id = m.usuario_id
+           LEFT JOIN jovenes j ON j.monitor_id = m.id AND j.evento_id = ae.evento_id
+           LEFT JOIN pagos p ON p.joven_id = j.id
+           WHERE ae.evento_id = $1 AND ae.activo = true AND m.activo = true
+           GROUP BY m.id, u.nombre_mostrado
+           ORDER BY u.nombre_mostrado`
+        : `SELECT m.id as monitor_id, u.nombre_mostrado,
+                  COUNT(DISTINCT j.id)::int as total_jovenes,
+                  COALESCE(SUM(CASE WHEN p.pagado = true THEN p.cantidad - COALESCE(p.descuento, 0) ELSE 0 END), 0) as recaudado
+           FROM monitores m
+           JOIN usuarios u ON u.id = m.usuario_id
+           LEFT JOIN jovenes j ON j.monitor_id = m.id AND j.evento_id = m.evento_id
+           LEFT JOIN pagos p ON p.joven_id = j.id
+           WHERE m.evento_id = $1 AND m.activo = true
+           GROUP BY m.id, u.nombre_mostrado
+           ORDER BY u.nombre_mostrado`,
+      [eventoId]
+    );
+
+    const por_monitor = porMonitor.rows.map((row) => {
+      const totalJovenes = Number(row.total_jovenes || 0);
+      return {
+        monitor_id: row.monitor_id,
+        nombre: row.nombre_mostrado,
+        total_jovenes: totalJovenes,
+        recaudado: Number(row.recaudado || 0),
+        esperado: precioEfectivo * totalJovenes,
+      };
+    });
+
+    const total_recaudado = por_monitor.reduce((acc, curr) => acc + curr.recaudado, 0);
+    const total_esperado = por_monitor.reduce((acc, curr) => acc + curr.esperado, 0);
+
+    res.json({
+      data: {
+        evento_id: eventoId,
+        total_recaudado,
+        total_esperado,
+        por_monitor,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // GET /api/admin/usuarios
 const getUsuarios = async (req, res, next) => {
   try {
@@ -722,6 +801,218 @@ const getJovenes = async (req, res, next) => {
     res.json({
       data: result.rows,
       total: result.rows.length,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/admin/jovenes
+const createJovenAdmin = async (req, res, next) => {
+  try {
+    const { nombre, apellidos, monitor_id, evento_id } = req.body;
+
+    if (!nombre || !apellidos || !monitor_id) {
+      return res.status(400).json({
+        error: {
+          code: 'MISSING_FIELDS',
+          message: 'nombre, apellidos and monitor_id are required',
+        },
+      });
+    }
+
+    const monitorResult = await pool.query(
+      `SELECT id, evento_id
+       FROM monitores
+       WHERE id = $1 AND activo = true`,
+      [monitor_id]
+    );
+
+    if (!monitorResult.rows.length) {
+      return res.status(404).json({
+        error: {
+          code: 'MONITOR_NOT_FOUND',
+          message: 'Monitor not found',
+        },
+      });
+    }
+
+    const monitorEventoId = monitorResult.rows[0].evento_id;
+    const finalEventoId = evento_id || monitorEventoId;
+
+    if (monitorEventoId && finalEventoId !== monitorEventoId) {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_EVENTO_MONITOR',
+          message: 'El monitor no está asignado a ese evento en el modelo legado',
+        },
+      });
+    }
+
+    const jovenResult = await pool.query(
+      `INSERT INTO jovenes (nombre, apellidos, monitor_id, evento_id)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, nombre, apellidos, monitor_id, evento_id, creado_en`,
+      [nombre, apellidos, monitor_id, finalEventoId]
+    );
+
+    res.status(201).json({
+      mensaje: 'Joven creado exitosamente',
+      data: jovenResult.rows[0],
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/admin/jovenes/:jovenId
+const updateJovenAdmin = async (req, res, next) => {
+  try {
+    const { jovenId } = req.params;
+    const updates = [];
+    const values = [];
+
+    if (req.body?.nombre !== undefined) {
+      values.push(String(req.body.nombre || '').trim());
+      updates.push(`nombre = $${values.length}`);
+    }
+
+    if (req.body?.apellidos !== undefined) {
+      values.push(String(req.body.apellidos || '').trim());
+      updates.push(`apellidos = $${values.length}`);
+    }
+
+    if (!updates.length) {
+      return res.status(400).json({
+        error: {
+          code: 'NO_FIELDS_TO_UPDATE',
+          message: 'No fields provided to update',
+        },
+      });
+    }
+
+    values.push(jovenId);
+    const result = await pool.query(
+      `UPDATE jovenes
+       SET ${updates.join(', ')}, actualizado_en = now()
+       WHERE id = $${values.length}
+       RETURNING id, nombre, apellidos, monitor_id, evento_id, actualizado_en`,
+      values
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({
+        error: {
+          code: 'JOVEN_NOT_FOUND',
+          message: 'Youth record not found',
+        },
+      });
+    }
+
+    res.json({
+      mensaje: 'Joven actualizado exitosamente',
+      data: result.rows[0],
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// DELETE /api/admin/jovenes/:jovenId
+const deleteJovenAdmin = async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    const { jovenId } = req.params;
+    await client.query('BEGIN');
+
+    await client.query(
+      `DELETE FROM documento_validaciones
+       WHERE documento_id IN (SELECT id FROM documentos WHERE joven_id = $1)`,
+      [jovenId]
+    );
+    await client.query('DELETE FROM documentos WHERE joven_id = $1', [jovenId]);
+    await client.query('DELETE FROM pagos WHERE joven_id = $1', [jovenId]);
+    await client.query('DELETE FROM joven_accesos WHERE joven_id = $1', [jovenId]);
+
+    const result = await client.query(
+      `DELETE FROM jovenes WHERE id = $1
+       RETURNING id, nombre, apellidos`,
+      [jovenId]
+    );
+
+    if (!result.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        error: {
+          code: 'JOVEN_NOT_FOUND',
+          message: 'Youth record not found',
+        },
+      });
+    }
+
+    await client.query('COMMIT');
+    res.json({
+      mensaje: 'Joven eliminado exitosamente',
+      data: result.rows[0],
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
+// GET /api/admin/jovenes/:jovenId/perfil
+const getJovenPerfilAdmin = async (req, res, next) => {
+  try {
+    const { jovenId } = req.params;
+
+    const jovenResult = await pool.query(
+      `SELECT j.id, j.nombre, j.apellidos, j.creado_en,
+              e.id as evento_id, e.nombre as evento_nombre,
+              m.id as monitor_id, u.nombre_mostrado as monitor_nombre
+       FROM jovenes j
+       JOIN eventos e ON e.id = j.evento_id
+       JOIN monitores m ON m.id = j.monitor_id
+       JOIN usuarios u ON u.id = m.usuario_id
+       WHERE j.id = $1`,
+      [jovenId]
+    );
+
+    if (!jovenResult.rows.length) {
+      return res.status(404).json({
+        error: {
+          code: 'JOVEN_NOT_FOUND',
+          message: 'Youth record not found',
+        },
+      });
+    }
+
+    const documentosResult = await pool.query(
+      `SELECT d.id, d.tipo, d.nombre_original, d.mime_type, d.subido_en,
+              COALESCE(v.validado, false) as validado, v.validado_en
+       FROM documentos d
+       LEFT JOIN documento_validaciones v ON v.documento_id = d.id
+       WHERE d.joven_id = $1
+       ORDER BY d.subido_en DESC`,
+      [jovenId]
+    );
+
+    const pagosResult = await pool.query(
+      `SELECT id, plazo_numero, cantidad, pagado, descuento, es_especial, nota_especial, fecha_pago, creado_en
+       FROM pagos
+       WHERE joven_id = $1
+       ORDER BY plazo_numero ASC, creado_en ASC`,
+      [jovenId]
+    );
+
+    res.json({
+      data: {
+        joven: jovenResult.rows[0],
+        documentos: documentosResult.rows,
+        pagos: pagosResult.rows,
+      },
     });
   } catch (err) {
     next(err);
@@ -1253,6 +1544,7 @@ module.exports = {
   getEvento,
   updateEvento,
   deleteEvento,
+  getEventoRecaudacionAdmin,
   updateEventoDescuentoGlobal,
   getEventoJovenes,
   getUsuarios,
@@ -1274,4 +1566,8 @@ module.exports = {
   revokeMonitorToken,
   getRegistrationLinks,
   getJovenes,
+  createJovenAdmin,
+  updateJovenAdmin,
+  deleteJovenAdmin,
+  getJovenPerfilAdmin,
 };

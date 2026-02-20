@@ -11,11 +11,20 @@ router.use(requireMonitorOrSimulated);
 // GET /api/monitor/registration-link
 router.get('/registration-link', monitorController.getRegistrationLink);
 
+// GET /api/monitor/eventos
+router.get('/eventos', monitorController.getEventosMonitor);
+
+// GET /api/monitor/eventos/:eventoId/recaudacion
+router.get('/eventos/:eventoId/recaudacion', monitorController.getEventoRecaudacionMonitor);
+
 // GET /api/monitor/jovenes
 router.get('/jovenes', monitorController.getJovenes);
 
 // GET /api/monitor/jovenes/:jovenId
 router.get('/jovenes/:jovenId', monitorController.getJovenDetalle);
+
+// PATCH /api/monitor/jovenes/:jovenId
+router.patch('/jovenes/:jovenId', monitorController.updateJoven);
 
 // GET /api/monitor/jovenes/:jovenId/documentos
 router.get('/jovenes/:jovenId/documentos', monitorController.getJovenDocumentos);

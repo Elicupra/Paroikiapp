@@ -37,6 +37,9 @@ router.delete('/eventos/:eventoId', adminController.deleteEvento);
 // GET /api/admin/eventos/:eventoId/jovenes
 router.get('/eventos/:eventoId/jovenes', adminController.getEventoJovenes);
 
+// GET /api/admin/eventos/:eventoId/recaudacion
+router.get('/eventos/:eventoId/recaudacion', adminController.getEventoRecaudacionAdmin);
+
 // GET /api/admin/usuarios
 router.get('/usuarios', adminController.getUsuarios);
 
@@ -82,5 +85,17 @@ router.delete('/monitores/:monitorId/token', adminController.revokeMonitorToken)
 
 // GET /api/admin/jovenes
 router.get('/jovenes', adminController.getJovenes);
+
+// POST /api/admin/jovenes
+router.post('/jovenes', adminController.createJovenAdmin);
+
+// PATCH /api/admin/jovenes/:jovenId
+router.patch('/jovenes/:jovenId', adminController.updateJovenAdmin);
+
+// DELETE /api/admin/jovenes/:jovenId
+router.delete('/jovenes/:jovenId', adminController.deleteJovenAdmin);
+
+// GET /api/admin/jovenes/:jovenId/perfil
+router.get('/jovenes/:jovenId/perfil', adminController.getJovenPerfilAdmin);
 
 module.exports = router;

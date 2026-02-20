@@ -1,0 +1,153 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
+const token = Astro.params.token;
+---
+
+<Layout title="Ficha personal">
+  <div style="max-width: 700px; margin: 2rem auto;">
+    <h2 style="margin-bottom: 1rem;">Ficha personal</h2>
+
+    <form id="fichaForm" style="background:white; padding:1rem; border-radius:0.5rem; margin-bottom:1rem;">
+      <div style="margin-bottom: 1rem;">
+        <label for="nombre" style="display:block; margin-bottom:0.35rem;">Nombre</label>
+        <input id="nombre" type="text" required style="width:100%;" />
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label for="apellidos" style="display:block; margin-bottom:0.35rem;">Apellidos</label>
+        <input id="apellidos" type="text" required style="width:100%;" />
+      </div>
+      <button type="submit">Guardar cambios</button>
+    </form>
+
+    <div style="background:white; padding:1rem; border-radius:0.5rem; margin-bottom:1rem;">
+      <h3 style="margin:0 0 0.75rem 0;">Subir documento</h3>
+      <div style="display:grid; gap:0.75rem;">
+        <select id="docTipo">
+          <option value="autorizacion_paterna">Autorización paterna</option>
+          <option value="tarjeta_sanitaria">Tarjeta sanitaria</option>
+        </select>
+        <input id="docFile" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt" />
+        <button id="docUploadBtn" type="button">Subir documento</button>
+      </div>
+    </div>
+
+    <div style="background:white; padding:1rem; border-radius:0.5rem;">
+      <h3 style="margin:0 0 0.75rem 0;">Documentos</h3>
+      <div id="docsList"></div>
+    </div>
+
+    <div id="message" style="margin-top:1rem;"></div>
+  </div>
+
+  <script define:vars={{ API_URL, token }}>
+    // @ts-nocheck
+    const messageEl = document.getElementById('message');
+    const docsList = document.getElementById('docsList');
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function showMessage(text, type = 'success') {
+      messageEl.textContent = text;
+      messageEl.style.color = type === 'success' ? '#065f46' : '#991b1b';
+    }
+
+    async function loadFicha() {
+      const response = await fetch(`${API_URL}/ficha/${token}`);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'No se pudo cargar la ficha');
+      }
+
+      const ficha = data.data;
+      document.getElementById('nombre').value = ficha.nombre || '';
+      document.getElementById('apellidos').value = ficha.apellidos || '';
+
+      const documentos = ficha.documentos || [];
+      docsList.innerHTML = documentos.length
+        ? documentos.map((doc) => `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0; border-bottom:1px solid #f1f5f9;">
+            <span>${escapeHtml(doc.tipo)} · ${escapeHtml(doc.nombre_original || 'archivo')}</span>
+            <button onclick="window.deleteFichaDoc('${doc.id}')" type="button" style="background:#dc2626; color:white; border:none; border-radius:0.35rem; padding:0.35rem 0.6rem;">Eliminar</button>
+          </div>
+        `).join('')
+        : '<p style="margin:0; color:#6b7280;">Sin documentos</p>';
+    }
+
+    document.getElementById('fichaForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const payload = {
+          nombre: document.getElementById('nombre').value,
+          apellidos: document.getElementById('apellidos').value,
+        };
+
+        const response = await fetch(`${API_URL}/ficha/${token}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || 'Error al guardar ficha');
+        showMessage('Ficha actualizada correctamente');
+      } catch (error) {
+        showMessage(error.message, 'error');
+      }
+    });
+
+    document.getElementById('docUploadBtn').addEventListener('click', async () => {
+      try {
+        const file = document.getElementById('docFile').files?.[0];
+        if (!file) {
+          showMessage('Selecciona un archivo', 'error');
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('tipo', document.getElementById('docTipo').value);
+        formData.append('archivo', file);
+
+        const response = await fetch(`${API_URL}/ficha/${token}/documento`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || 'Error subiendo documento');
+
+        showMessage('Documento subido correctamente');
+        document.getElementById('docFile').value = '';
+        await loadFicha();
+      } catch (error) {
+        showMessage(error.message, 'error');
+      }
+    });
+
+    window.deleteFichaDoc = async (docId) => {
+      try {
+        const response = await fetch(`${API_URL}/ficha/${token}/documento/${docId}`, {
+          method: 'DELETE',
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || 'Error eliminando documento');
+
+        showMessage('Documento eliminado');
+        await loadFicha();
+      } catch (error) {
+        showMessage(error.message, 'error');
+      }
+    };
+
+    loadFicha().catch((error) => showMessage(error.message, 'error'));
+  </script>
+</Layout>

@@ -301,14 +301,14 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
               </div>
 
               <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
-                <button onclick="editEvento('${evento.id}')" style="flex: 1; padding: 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;">
+                <button class="btn-editar-evento" data-evento-id="${evento.id}" style="flex: 1; padding: 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;">
                   Editar
                 </button>
-                <button onclick="setDescuentoGlobal('${evento.id}', ${Number(evento.descuento_global || 0)})" style="flex: 1; padding: 0.5rem; background: #8b5cf6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;">
+                <button class="btn-descuento-evento" data-evento-id="${evento.id}" data-descuento="${Number(evento.descuento_global || 0)}" style="flex: 1; padding: 0.5rem; background: #8b5cf6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;">
                   Descuento
                 </button>
                 ${evento.activo ? `
-                  <button onclick="deleteEvento('${evento.id}')" style="flex: 1; padding: 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;">
+                  <button class="btn-desactivar-evento" data-evento-id="${evento.id}" style="flex: 1; padding: 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;">
                     Desactivar
                   </button>
                 ` : ''}
@@ -519,6 +519,29 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
       document.getElementById('tabActivos').style.color = '#6b7280';
       loadEventos();
     };
+
+    document.getElementById('eventosContainer').addEventListener('click', (e) => {
+      const editButton = e.target.closest('.btn-editar-evento');
+      if (editButton) {
+        const eventoId = editButton.getAttribute('data-evento-id');
+        if (eventoId) window.editEvento(eventoId);
+        return;
+      }
+
+      const descuentoButton = e.target.closest('.btn-descuento-evento');
+      if (descuentoButton) {
+        const eventoId = descuentoButton.getAttribute('data-evento-id');
+        const descuento = Number(descuentoButton.getAttribute('data-descuento') || 0);
+        if (eventoId) window.setDescuentoGlobal(eventoId, descuento);
+        return;
+      }
+
+      const desactivarButton = e.target.closest('.btn-desactivar-evento');
+      if (desactivarButton) {
+        const eventoId = desactivarButton.getAttribute('data-evento-id');
+        if (eventoId) window.deleteEvento(eventoId);
+      }
+    });
 
     // Mostrar mensajes
     function showMessage(text, type) {

@@ -1,0 +1,61 @@
+name: Smoke API
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  smoke-api:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: camposter
+          POSTGRES_PASSWORD: camposter123
+          POSTGRES_DB: campregister
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U camposter -d campregister"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: postgresql://camposter:camposter123@localhost:5432/campregister
+      DB_SCHEMA: paroikiapp
+      JWT_SECRET: ci-smoke-secret-key-please-change-in-prod
+      FRONTEND_URL: http://localhost:3000
+      API_PORT: 3001
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Prepare schema and extension
+        working-directory: backend
+        run: |
+          node -e "const { Client } = require('pg'); (async () => { const c = new Client({ connectionString: process.env.DATABASE_URL }); await c.connect(); await c.query('CREATE SCHEMA IF NOT EXISTS paroikiapp;'); await c.query('CREATE EXTENSION IF NOT EXISTS pgcrypto;'); await c.end(); })().catch((e) => { console.error(e); process.exit(1); });"
+
+      - name: Run migrations
+        working-directory: backend
+        run: npm run migrate
+
+      - name: Seed database
+        working-directory: backend
+        run: npm run seed
+
+      - name: Run smoke API suite
+        run: npm run smoke:api

@@ -4,6 +4,10 @@
   "version": "1.0.0",
   "scripts": {
     "e2e": "node test/run-e2e.js",
-    "e2e:only": "node test/e2e.js"
+    "e2e:only": "node test/e2e.js",
+    "smoke:api": "node test/run-smoke-api.js",
+    "smoke:api:only": "node test/smoke-admin-assignments.js",
+    "smoke:youth": "node test/smoke-youth-flow.js",
+    "smoke:roles": "node test/smoke-role-requirements.js"
   }
 }

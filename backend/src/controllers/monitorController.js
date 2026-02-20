@@ -21,18 +21,133 @@ const hasAsignacionEventosTable = async () => {
 
 const getEffectiveUserId = (req) => req.user.simulatedUserId || req.user.userId;
 
+// GET /api/monitor/eventos
+const getEventosMonitor = async (req, res, next) => {
+  try {
+    const userId = getEffectiveUserId(req);
+    const withAsignaciones = await hasAsignacionEventosTable();
+
+    const result = await pool.query(
+      withAsignaciones
+        ? `SELECT e.id, e.nombre, e.tipo, e.fecha_inicio, e.fecha_fin, e.activo,
+                  e.precio_base, COALESCE(ec.descuento_global, 0) as descuento_global,
+                  ae.max_jovenes
+           FROM monitores m
+           JOIN asignacion_eventos ae ON ae.monitor_id = m.id
+           JOIN eventos e ON e.id = ae.evento_id
+           LEFT JOIN evento_config ec ON ec.evento_id = e.id
+           WHERE m.usuario_id = $1 AND m.activo = true AND ae.activo = true
+           ORDER BY e.fecha_inicio DESC NULLS LAST, e.creado_en DESC`
+        : `SELECT e.id, e.nombre, e.tipo, e.fecha_inicio, e.fecha_fin, e.activo,
+                  e.precio_base, COALESCE(ec.descuento_global, 0) as descuento_global,
+                  NULL::int as max_jovenes
+           FROM monitores m
+           JOIN eventos e ON e.id = m.evento_id
+           LEFT JOIN evento_config ec ON ec.evento_id = e.id
+           WHERE m.usuario_id = $1 AND m.activo = true
+           ORDER BY e.fecha_inicio DESC NULLS LAST, e.creado_en DESC`,
+      [userId]
+    );
+
+    res.json({
+      data: result.rows,
+      total: result.rows.length,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/monitor/eventos/:eventoId/recaudacion
+const getEventoRecaudacionMonitor = async (req, res, next) => {
+  try {
+    const userId = getEffectiveUserId(req);
+    const { eventoId } = req.params;
+    const withAsignaciones = await hasAsignacionEventosTable();
+
+    const monitorResult = await pool.query(
+      withAsignaciones
+        ? `SELECT m.id as monitor_id, e.id as evento_id, e.precio_base,
+                  COALESCE(ec.descuento_global, 0) as descuento_global,
+                  ae.max_jovenes
+           FROM monitores m
+           JOIN asignacion_eventos ae ON ae.monitor_id = m.id AND ae.evento_id = $2
+           JOIN eventos e ON e.id = ae.evento_id
+           LEFT JOIN evento_config ec ON ec.evento_id = e.id
+           WHERE m.usuario_id = $1 AND m.activo = true AND ae.activo = true`
+        : `SELECT m.id as monitor_id, e.id as evento_id, e.precio_base,
+                  COALESCE(ec.descuento_global, 0) as descuento_global,
+                  NULL::int as max_jovenes
+           FROM monitores m
+           JOIN eventos e ON e.id = m.evento_id
+           LEFT JOIN evento_config ec ON ec.evento_id = e.id
+           WHERE m.usuario_id = $1 AND m.evento_id = $2 AND m.activo = true`,
+      [userId, eventoId]
+    );
+
+    if (!monitorResult.rows.length) {
+      return res.status(404).json({
+        error: {
+          code: 'MONITOR_EVENT_NOT_FOUND',
+          message: 'Monitor no asignado a ese evento',
+        },
+      });
+    }
+
+    const { monitor_id, precio_base, descuento_global, max_jovenes } = monitorResult.rows[0];
+
+    const byJoven = await pool.query(
+      `SELECT j.id as joven_id, j.nombre, j.apellidos,
+              COALESCE(SUM(CASE WHEN p.pagado = true THEN p.cantidad - COALESCE(p.descuento, 0) ELSE 0 END), 0) as recaudado
+       FROM jovenes j
+       LEFT JOIN pagos p ON p.joven_id = j.id
+       WHERE j.monitor_id = $1 AND j.evento_id = $2
+       GROUP BY j.id, j.nombre, j.apellidos
+       ORDER BY j.creado_en DESC`,
+      [monitor_id, eventoId]
+    );
+
+    const agg = await pool.query(
+      `SELECT COUNT(DISTINCT j.id)::int as total_jovenes,
+              COALESCE(SUM(CASE WHEN p.pagado = true THEN p.cantidad - COALESCE(p.descuento, 0) ELSE 0 END), 0) as recaudado
+       FROM jovenes j
+       LEFT JOIN pagos p ON p.joven_id = j.id
+       WHERE j.monitor_id = $1 AND j.evento_id = $2`,
+      [monitor_id, eventoId]
+    );
+
+    const totalJovenes = Number(agg.rows[0]?.total_jovenes || 0);
+    const recaudado = Number(agg.rows[0]?.recaudado || 0);
+    const precioEfectivo = Math.max(0, Number(precio_base || 0) - Number(descuento_global || 0));
+    const esperado = precioEfectivo * totalJovenes;
+
+    res.json({
+      data: {
+        evento_id: eventoId,
+        total_jovenes: totalJovenes,
+        max_jovenes: Number.isInteger(Number(max_jovenes)) ? Number(max_jovenes) : null,
+        recaudado,
+        esperado,
+        por_joven: byJoven.rows,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // GET /api/monitor/jovenes - Listar jóvenes del monitor
 const getJovenes = async (req, res, next) => {
   try {
     const userId = getEffectiveUserId(req);
+    const withAsignaciones = await hasAsignacionEventosTable();
 
-    // Obtener el monitor asociado al usuario
-    const monitorResult = await pool.query(
-      'SELECT id, evento_id FROM monitores WHERE usuario_id = $1 AND activo = true',
+    const monitorExists = await pool.query(
+      'SELECT 1 FROM monitores WHERE usuario_id = $1 AND activo = true LIMIT 1',
       [userId]
     );
 
-    if (!monitorResult.rows.length) {
+    if (!monitorExists.rows.length) {
       return res.status(404).json({
         error: {
           code: 'MONITOR_NOT_FOUND',
@@ -41,10 +156,8 @@ const getJovenes = async (req, res, next) => {
       });
     }
 
-    const { id: monitorId } = monitorResult.rows[0];
-
-    // Obtener jóvenes del monitor
-    const query = `
+    const query = withAsignaciones
+      ? `
             SELECT j.id, j.nombre, j.apellidos, j.creado_en, j.evento_id,
              COUNT(DISTINCT d.id) as documentos_count,
              COUNT(DISTINCT p.id) as pagos_count,
@@ -52,14 +165,31 @@ const getJovenes = async (req, res, next) => {
               SUM(CASE WHEN p.pagado = true THEN COALESCE(p.descuento, 0) ELSE 0 END) as descuento_aplicado,
               BOOL_OR(COALESCE(p.es_especial, false)) as trato_especial
       FROM jovenes j
+      JOIN monitores m ON m.id = j.monitor_id
+      LEFT JOIN asignacion_eventos ae ON ae.monitor_id = m.id AND ae.evento_id = j.evento_id
       LEFT JOIN documentos d ON j.id = d.joven_id
       LEFT JOIN pagos p ON j.id = p.joven_id
-      WHERE j.monitor_id = $1
+      WHERE m.usuario_id = $1 AND m.activo = true AND (ae.activo = true OR ae.activo IS NULL)
+      GROUP BY j.id, j.nombre, j.apellidos, j.creado_en, j.evento_id
+      ORDER BY j.creado_en DESC
+    `
+      : `
+            SELECT j.id, j.nombre, j.apellidos, j.creado_en, j.evento_id,
+             COUNT(DISTINCT d.id) as documentos_count,
+             COUNT(DISTINCT p.id) as pagos_count,
+              SUM(CASE WHEN p.pagado = true THEN p.cantidad ELSE 0 END) as total_pagado,
+              SUM(CASE WHEN p.pagado = true THEN COALESCE(p.descuento, 0) ELSE 0 END) as descuento_aplicado,
+              BOOL_OR(COALESCE(p.es_especial, false)) as trato_especial
+      FROM jovenes j
+      JOIN monitores m ON m.id = j.monitor_id
+      LEFT JOIN documentos d ON j.id = d.joven_id
+      LEFT JOIN pagos p ON j.id = p.joven_id
+      WHERE m.usuario_id = $1 AND m.activo = true
       GROUP BY j.id, j.nombre, j.apellidos, j.creado_en, j.evento_id
       ORDER BY j.creado_en DESC
     `;
 
-    const jovenResult = await pool.query(query, [monitorId]);
+    const jovenResult = await pool.query(query, [userId]);
 
     res.json({
       data: jovenResult.rows,
@@ -128,6 +258,69 @@ const getJovenDetalle = async (req, res, next) => {
       },
       documentos: docsResult.rows,
       pagos: pagosResult.rows,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/monitor/jovenes/:jovenId
+const updateJoven = async (req, res, next) => {
+  try {
+    const userId = getEffectiveUserId(req);
+    const { jovenId } = req.params;
+
+    const ownerResult = await pool.query(
+      `SELECT j.id
+       FROM jovenes j
+       JOIN monitores m ON m.id = j.monitor_id
+       WHERE j.id = $1 AND m.usuario_id = $2`,
+      [jovenId, userId]
+    );
+
+    if (!ownerResult.rows.length) {
+      return res.status(403).json({
+        error: {
+          code: 'FORBIDDEN',
+          message: 'You can only edit your own youth records',
+        },
+      });
+    }
+
+    const updates = [];
+    const values = [];
+
+    if (req.body?.nombre !== undefined) {
+      values.push(String(req.body.nombre || '').trim());
+      updates.push(`nombre = $${values.length}`);
+    }
+
+    if (req.body?.apellidos !== undefined) {
+      values.push(String(req.body.apellidos || '').trim());
+      updates.push(`apellidos = $${values.length}`);
+    }
+
+    if (!updates.length) {
+      return res.status(400).json({
+        error: {
+          code: 'NO_FIELDS_TO_UPDATE',
+          message: 'No fields provided to update',
+        },
+      });
+    }
+
+    values.push(jovenId);
+    const result = await pool.query(
+      `UPDATE jovenes
+       SET ${updates.join(', ')}, actualizado_en = now()
+       WHERE id = $${values.length}
+       RETURNING id, nombre, apellidos, actualizado_en`,
+      values
+    );
+
+    res.json({
+      mensaje: 'Joven actualizado exitosamente',
+      data: result.rows[0],
     });
   } catch (err) {
     next(err);
@@ -421,8 +614,11 @@ const validarDocumento = async (req, res, next) => {
 };
 
 module.exports = {
+  getEventosMonitor,
+  getEventoRecaudacionMonitor,
   getJovenes,
   getJovenDetalle,
+  updateJoven,
   createPago,
   updatePago,
   getRegistrationLink,

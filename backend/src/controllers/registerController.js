@@ -192,7 +192,7 @@ const registerJoven = async (req, res, next) => {
       },
       acceso: {
         token: accessToken,
-        url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/registro/${accessToken}`,
+        url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/ficha/${accessToken}`,
       },
     });
   } catch (err) {

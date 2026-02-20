@@ -255,10 +255,52 @@ const changeEmail = async (req, res, next) => {
   }
 };
 
+// PATCH /api/auth/me/profile
+const updateProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+    const nombre_mostrado = String(req.body?.nombre_mostrado || '').trim();
+
+    if (!nombre_mostrado || nombre_mostrado.length < 2 || nombre_mostrado.length > 100) {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_NAME',
+          message: 'nombre_mostrado must be 2-100 characters',
+        },
+      });
+    }
+
+    const result = await pool.query(
+      `UPDATE usuarios
+       SET nombre_mostrado = $1, actualizado_en = NOW()
+       WHERE id = $2
+       RETURNING id, email, nombre_mostrado, rol`,
+      [nombre_mostrado, userId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found',
+        },
+      });
+    }
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: result.rows[0],
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   login,
   refreshTokenEndpoint,
   logout,
   changePassword,
   changeEmail,
+  updateProfile,
 };

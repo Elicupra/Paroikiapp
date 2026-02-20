@@ -22,7 +22,7 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+  const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'text/plain', 'application/octet-stream'];
   if (!allowed.includes(file.mimetype)) {
     return cb(new Error('Formato no permitido. Solo PDF o imagen'), false);
   }

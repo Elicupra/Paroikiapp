@@ -1,5 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 ---
 
 <Layout title="Gestion de Usuarios">
@@ -17,6 +19,7 @@ import Layout from '../layouts/Layout.astro';
         <option value="todos">Todos</option>
         <option value="monitor">Monitores</option>
         <option value="organizador">Organizadores</option>
+        <option value="administrador">Administradores</option>
       </select>
       <select id="estadoFilter" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.5rem;">
         <option value="todos">Todos</option>
@@ -106,9 +109,8 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </div>
 
-  <script>
+  <script define:vars={{ API_URL }}>
     // @ts-nocheck
-    const API_URL = 'http://localhost:3001';
     const accessToken = localStorage.getItem('accessToken');
 
     if (!accessToken) {
@@ -125,6 +127,13 @@ import Layout from '../layouts/Layout.astro';
     const formUsuario = document.getElementById('formUsuario');
     const messageEl = document.getElementById('message');
     const modalMessageEl = document.getElementById('modalMessageUsuario');
+
+    const escapeHtml = (value) => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
 
     function showModalMessage(text, type) {
       modalMessageEl.textContent = text;
@@ -217,9 +226,9 @@ import Layout from '../layouts/Layout.astro';
           <tbody>
             ${filtered.map(u => `
               <tr style="border-bottom: 1px solid #e5e7eb;">
-                <td style="padding: 1rem;">${u.nombre_mostrado}</td>
-                <td style="padding: 1rem;">${u.email}</td>
-                <td style="padding: 1rem; text-transform: capitalize;">${u.rol}</td>
+                <td style="padding: 1rem;">${escapeHtml(u.nombre_mostrado)}</td>
+                <td style="padding: 1rem;">${escapeHtml(u.email)}</td>
+                <td style="padding: 1rem; text-transform: capitalize;">${escapeHtml(u.rol)}</td>
                 <td style="padding: 1rem;">${u.rol === 'monitor' ? (u.jovenes_count || 0) : '-'}</td>
                 <td style="padding: 1rem;">
                   <span style="padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.875rem; background: ${u.activo ? '#d1fae5' : '#fee2e2'}; color: ${u.activo ? '#065f46' : '#991b1b'};">
@@ -229,7 +238,7 @@ import Layout from '../layouts/Layout.astro';
                 <td style="padding: 1rem;">
                   <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                     <button onclick="editUsuario('${u.id}')" style="padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">Editar</button>
-                    ${u.rol === 'monitor' ? `<button onclick="openAsignacion('${u.id}', '${u.nombre_mostrado}')" style="padding: 0.5rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">Asignar Eventos</button>` : ''}
+                    ${u.rol === 'monitor' ? `<button class="btn-asignar" data-user-id="${u.id}" data-user-name="${escapeHtml(u.nombre_mostrado)}" style="padding: 0.5rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">Asignar Eventos</button>` : ''}
                     <button onclick="toggleActivo('${u.id}')" style="padding: 0.5rem 1rem; background: ${u.activo ? '#ef4444' : '#10b981'}; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">
                       ${u.activo ? 'Desactivar' : 'Activar'}
                     </button>
@@ -386,8 +395,8 @@ import Layout from '../layouts/Layout.astro';
               return `
                 <div style="border: 1px solid #e5e7eb; padding: 1rem; border-radius: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
                   <div>
-                    <h4 style="margin: 0 0 0.25rem 0;">${e.nombre}</h4>
-                    <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">${e.tipo} | ${fechaInicio} - ${fechaFin}</p>
+                    <h4 style="margin: 0 0 0.25rem 0;">${escapeHtml(e.nombre)}</h4>
+                    <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">${escapeHtml(e.tipo)} | ${fechaInicio} - ${fechaFin}</p>
                   </div>
                   ${asignado ? `
                     <button onclick="removeAsignacion('${asignado.monitor_id}')" style="padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: 0.5rem; cursor: pointer;">Quitar</button>
@@ -449,6 +458,16 @@ import Layout from '../layouts/Layout.astro';
     document.getElementById('rolFilter').onchange = renderUsuarios;
     document.getElementById('estadoFilter').onchange = renderUsuarios;
     document.getElementById('btnRefrescar').onclick = loadUsuarios;
+
+    document.getElementById('usuariosContainer').addEventListener('click', (e) => {
+      const button = e.target.closest('.btn-asignar');
+      if (!button) return;
+      const usuarioId = button.getAttribute('data-user-id');
+      const nombre = button.getAttribute('data-user-name') || 'Monitor';
+      if (usuarioId) {
+        window.openAsignacion(usuarioId, nombre);
+      }
+    });
 
     function showMessage(text, type) {
       messageEl.textContent = text;

@@ -25,8 +25,25 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
         <input type="text" id="apellidos" name="apellidos" required style="width: 100%;" />
       </div>
 
+      <div style="margin-bottom: 1rem;">
+        <label for="doc_autorizacion" style="display: block; margin-bottom: 0.5rem;">Autorización paterna (opcional)</label>
+        <input type="file" id="doc_autorizacion" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt" style="width: 100%;" />
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label for="doc_sanitaria" style="display: block; margin-bottom: 0.5rem;">Tarjeta sanitaria (opcional)</label>
+        <input type="file" id="doc_sanitaria" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt" style="width: 100%;" />
+      </div>
+
       <button type="submit" style="width: 100%; padding: 0.75rem;">Registrarse</button>
     </form>
+
+    <div id="fichaAccess" style="display:none; margin-top:1.5rem; padding:1rem; border:1px solid #bfdbfe; background:#eff6ff; border-radius:0.5rem;">
+      <h4 style="margin:0 0 0.5rem 0;">Tu enlace personal</h4>
+      <p style="margin:0 0 0.5rem 0; color:#1e3a8a;">Guárdalo ahora, se muestra una sola vez.</p>
+      <input id="fichaUrl" type="text" readonly style="width:100%; padding:0.5rem; margin-bottom:0.5rem;" />
+      <button id="copyFichaBtn" type="button" style="padding:0.5rem 1rem;">Copiar enlace</button>
+    </div>
 
     <div id="message"></div>
   </div>
@@ -37,6 +54,32 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
     const messageEl = document.getElementById('message');
     const eventInfoDiv = document.getElementById('eventInfo');
     const form = document.getElementById('registerForm');
+    const fichaAccess = document.getElementById('fichaAccess');
+    const fichaUrlInput = document.getElementById('fichaUrl');
+    const copyFichaBtn = document.getElementById('copyFichaBtn');
+
+    async function uploadOptionalDocumento(accesoToken, tipo, file) {
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('tipo', tipo);
+      formData.append('archivo', file);
+
+      const response = await fetch(`${API_URL}/register/acceso/${accesoToken}/documento`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      let data = null;
+      try {
+        data = await response.json();
+      } catch (_) {
+        data = null;
+      }
+
+      if (!response.ok) {
+        throw new Error(data?.error?.message || 'Error subiendo documento');
+      }
+    }
 
     if (!token) {
       messageEl.className = 'error';
@@ -72,6 +115,8 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 
       const nombre = document.getElementById('nombre').value;
       const apellidos = document.getElementById('apellidos').value;
+      const fileAut = document.getElementById('doc_autorizacion').files?.[0] || null;
+      const fileSan = document.getElementById('doc_sanitaria').files?.[0] || null;
 
       try {
         messageEl.innerHTML = '';
@@ -92,17 +137,41 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
           return;
         }
 
-        messageEl.className = 'success';
-        messageEl.textContent = '¡Registrado exitosamente! ' + data.mensaje;
-        form.reset();
+        const accessToken = data.acceso?.token;
+        const accessUrl = data.acceso?.url;
 
-        // Opcionalmente, redirigir después de 3 segundos
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 3000);
+        if (!accessToken || !accessUrl) {
+          throw new Error('No se recibió el enlace personal del joven');
+        }
+
+        if (fileAut) {
+          await uploadOptionalDocumento(accessToken, 'autorizacion_paterna', fileAut);
+        }
+        if (fileSan) {
+          await uploadOptionalDocumento(accessToken, 'tarjeta_sanitaria', fileSan);
+        }
+
+        messageEl.className = 'success';
+        messageEl.textContent = '¡Registrado exitosamente! Revisa y guarda tu enlace personal.';
+        form.reset();
+        form.style.display = 'none';
+
+        fichaUrlInput.value = accessUrl;
+        fichaAccess.style.display = 'block';
       } catch (error) {
         messageEl.className = 'error';
         messageEl.textContent = 'Error de conexión: ' + error.message;
+      }
+    });
+
+    copyFichaBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(fichaUrlInput.value);
+        messageEl.className = 'success';
+        messageEl.textContent = 'Enlace copiado al portapapeles';
+      } catch (error) {
+        messageEl.className = 'error';
+        messageEl.textContent = 'No se pudo copiar el enlace';
       }
     });
   </script>

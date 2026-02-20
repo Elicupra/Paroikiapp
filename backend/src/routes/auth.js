@@ -20,4 +20,7 @@ router.patch('/me/password', authMiddleware, validateNewPassword, authController
 // PATCH /api/auth/me/email
 router.patch('/me/email', authMiddleware, authController.changeEmail);
 
+// PATCH /api/auth/me/profile
+router.patch('/me/profile', authMiddleware, authController.updateProfile);
+
 module.exports = router;
