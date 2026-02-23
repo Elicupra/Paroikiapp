@@ -296,6 +296,123 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
+// GET /api/auth/me/profile
+const getMyProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+
+    const result = await pool.query(
+      `SELECT id, email, nombre_mostrado, rol,
+              COALESCE(notificacion_email, email) as notificacion_email,
+              COALESCE(notificacion_webhook, '') as notificacion_webhook,
+              COALESCE(notificacion_email_habilitada, true) as notificacion_email_habilitada
+       FROM usuarios
+       WHERE id = $1`,
+      [userId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found',
+        },
+      });
+    }
+
+    res.json({ user: result.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/auth/me/notifications
+const getMyNotifications = async (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+
+    const result = await pool.query(
+      `SELECT id,
+              COALESCE(notificacion_email, email) as notificacion_email,
+              COALESCE(notificacion_webhook, '') as notificacion_webhook,
+              COALESCE(notificacion_email_habilitada, true) as notificacion_email_habilitada
+       FROM usuarios
+       WHERE id = $1`,
+      [userId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found',
+        },
+      });
+    }
+
+    res.json({ data: result.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/auth/me/notifications
+const updateMyNotifications = async (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+    const notificacion_email = String(req.body?.notificacion_email || '').trim();
+    const notificacion_webhook = String(req.body?.notificacion_webhook || '').trim();
+    const notificacion_email_habilitada = req.body?.notificacion_email_habilitada !== undefined
+      ? Boolean(req.body.notificacion_email_habilitada)
+      : true;
+
+    if (notificacion_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(notificacion_email)) {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_EMAIL',
+          message: 'Invalid notification email format',
+        },
+      });
+    }
+
+    if (notificacion_webhook && !/^https?:\/\//i.test(notificacion_webhook)) {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_WEBHOOK',
+          message: 'Webhook must start with http:// or https://',
+        },
+      });
+    }
+
+    const result = await pool.query(
+      `UPDATE usuarios
+       SET notificacion_email = $1,
+           notificacion_webhook = $2,
+           notificacion_email_habilitada = $3,
+           actualizado_en = NOW()
+       WHERE id = $4
+       RETURNING id,
+                 COALESCE(notificacion_email, email) as notificacion_email,
+                 COALESCE(notificacion_webhook, '') as notificacion_webhook,
+                 COALESCE(notificacion_email_habilitada, true) as notificacion_email_habilitada`,
+      [notificacion_email || null, notificacion_webhook || null, notificacion_email_habilitada, userId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found',
+        },
+      });
+    }
+
+    res.json({ message: 'Notification preferences updated', data: result.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   login,
   refreshTokenEndpoint,
@@ -303,4 +420,7 @@ module.exports = {
   changePassword,
   changeEmail,
   updateProfile,
+  getMyProfile,
+  getMyNotifications,
+  updateMyNotifications,
 };

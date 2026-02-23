@@ -81,6 +81,13 @@ router.get('/monitores/:monitorId/dashboard', adminController.getMonitorDashboar
 // GET /api/admin/monitores/:monitorId/ficheros
 router.get('/monitores/:monitorId/ficheros', adminController.getMonitorFicherosAdmin);
 
+// GET /api/admin/monitores/perfiles
+router.get('/monitores/perfiles', adminController.getMonitoresPerfiles);
+
+// GET/PATCH /api/admin/monitores/:monitorId/perfil
+router.get('/monitores/:monitorId/perfil', adminController.getMonitorPerfilAdmin);
+router.patch('/monitores/:monitorId/perfil', adminController.updateMonitorPerfilAdmin);
+
 // Límite de jóvenes por monitor
 router.patch('/monitores/:monitorId/max-jovenes', adminController.updateMonitorMaxJovenes);
 

@@ -31,6 +31,13 @@
 - `frontend/src/pages/admin.astro` mejora calidad/cantidad de datos de eventos con métricas de monitores y jóvenes por evento.
 - `frontend/src/pages/admin.astro` corrige modal de perfil de joven (cierre por botón, overlay y tecla Escape) e incorpora gestión directa de joven (editar/borrar).
 - `frontend/src/pages/admin.astro` actualiza acciones principales: **Ver Usuarios** → **Ver Monitores** y botón de jóvenes enlazado a `/usuarios?scope=all`.
+- `frontend/src/pages/monitor.astro` reescrito como panel de perfil con navegación lateral y 3 vistas: **Perfil**, **Notificaciones**, **Documentación**.
+- `frontend/src/pages/monitor.astro` separa comportamientos por rol:
+	- monitor: gestiona su propio perfil, contraseña, preferencias de notificación y ficheros,
+	- admin: accede a perfiles de monitores para incidencias, modifica datos/perfil de notificaciones y consulta documentación.
+- `backend/src/controllers/authController.js` y `backend/src/routes/auth.js` añaden endpoints para perfil/notifications del usuario autenticado (`GET /api/auth/me/profile`, `GET/PATCH /api/auth/me/notifications`).
+- `backend/src/controllers/adminController.js` y `backend/src/routes/admin.js` añaden gestión de perfiles de monitor para admin (`GET /api/admin/monitores/perfiles`, `GET/PATCH /api/admin/monitores/:monitorId/perfil`).
+- `backend/src/models/advancedSchema.js` amplía `usuarios` con campos de notificación (`notificacion_email`, `notificacion_webhook`, `notificacion_email_habilitada`).
 - `frontend/src/components/Navbar.astro` aclara diferencias de navegación: **Monitor (Gestión)** (admin) vs **Panel de Monitor** (admin/monitor).
 - `TODO.md` deja explícito que el ajuste final de `/monitor` queda pospuesto para un bloque posterior dedicado.
 

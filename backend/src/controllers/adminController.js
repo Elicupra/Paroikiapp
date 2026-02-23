@@ -984,6 +984,152 @@ const getMonitorFicherosAdmin = async (req, res, next) => {
   }
 };
 
+// GET /api/admin/monitores/perfiles
+const getMonitoresPerfiles = async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT m.id as monitor_id,
+              m.usuario_id,
+              u.email,
+              u.nombre_mostrado,
+              u.activo,
+              COALESCE(u.notificacion_email, u.email) as notificacion_email,
+              COALESCE(u.notificacion_webhook, '') as notificacion_webhook,
+              COALESCE(u.notificacion_email_habilitada, true) as notificacion_email_habilitada,
+              COUNT(DISTINCT j.id)::int as total_jovenes
+       FROM monitores m
+       JOIN usuarios u ON u.id = m.usuario_id
+       LEFT JOIN jovenes j ON j.monitor_id = m.id
+       WHERE u.rol = 'monitor' AND m.activo = true
+       GROUP BY m.id, m.usuario_id, u.email, u.nombre_mostrado, u.activo,
+                u.notificacion_email, u.notificacion_webhook, u.notificacion_email_habilitada
+       ORDER BY u.nombre_mostrado ASC`
+    );
+
+    res.json({ data: result.rows, total: result.rows.length });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/admin/monitores/:monitorId/perfil
+const getMonitorPerfilAdmin = async (req, res, next) => {
+  try {
+    const { monitorId } = req.params;
+
+    const result = await pool.query(
+      `SELECT m.id as monitor_id,
+              m.usuario_id,
+              u.email,
+              u.nombre_mostrado,
+              u.activo,
+              COALESCE(u.notificacion_email, u.email) as notificacion_email,
+              COALESCE(u.notificacion_webhook, '') as notificacion_webhook,
+              COALESCE(u.notificacion_email_habilitada, true) as notificacion_email_habilitada
+       FROM monitores m
+       JOIN usuarios u ON u.id = m.usuario_id
+       WHERE m.id = $1 AND u.rol = 'monitor'
+       LIMIT 1`,
+      [monitorId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({
+        error: { code: 'MONITOR_NOT_FOUND', message: 'Monitor not found' },
+      });
+    }
+
+    res.json({ data: result.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/admin/monitores/:monitorId/perfil
+const updateMonitorPerfilAdmin = async (req, res, next) => {
+  try {
+    const { monitorId } = req.params;
+    const email = String(req.body?.email || '').trim();
+    const nombre_mostrado = String(req.body?.nombre_mostrado || '').trim();
+    const notificacion_email = String(req.body?.notificacion_email || '').trim();
+    const notificacion_webhook = String(req.body?.notificacion_webhook || '').trim();
+    const notificacion_email_habilitada = req.body?.notificacion_email_habilitada !== undefined
+      ? Boolean(req.body.notificacion_email_habilitada)
+      : true;
+
+    if (!email || !nombre_mostrado) {
+      return res.status(400).json({
+        error: { code: 'MISSING_FIELDS', message: 'email and nombre_mostrado are required' },
+      });
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({
+        error: { code: 'INVALID_EMAIL', message: 'Invalid email format' },
+      });
+    }
+
+    if (notificacion_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(notificacion_email)) {
+      return res.status(400).json({
+        error: { code: 'INVALID_NOTIFICATION_EMAIL', message: 'Invalid notification email format' },
+      });
+    }
+
+    if (notificacion_webhook && !/^https?:\/\//i.test(notificacion_webhook)) {
+      return res.status(400).json({
+        error: { code: 'INVALID_WEBHOOK', message: 'Webhook must start with http:// or https://' },
+      });
+    }
+
+    const monitorResult = await pool.query(
+      `SELECT usuario_id
+       FROM monitores
+       WHERE id = $1
+       LIMIT 1`,
+      [monitorId]
+    );
+
+    if (!monitorResult.rows.length) {
+      return res.status(404).json({
+        error: { code: 'MONITOR_NOT_FOUND', message: 'Monitor not found' },
+      });
+    }
+
+    const usuarioId = monitorResult.rows[0].usuario_id;
+
+    const updated = await pool.query(
+      `UPDATE usuarios
+       SET email = $1,
+           nombre_mostrado = $2,
+           notificacion_email = $3,
+           notificacion_webhook = $4,
+           notificacion_email_habilitada = $5,
+           actualizado_en = NOW()
+       WHERE id = $6 AND rol = 'monitor'
+       RETURNING id, email, nombre_mostrado,
+                 COALESCE(notificacion_email, email) as notificacion_email,
+                 COALESCE(notificacion_webhook, '') as notificacion_webhook,
+                 COALESCE(notificacion_email_habilitada, true) as notificacion_email_habilitada`,
+      [email, nombre_mostrado, notificacion_email || null, notificacion_webhook || null, notificacion_email_habilitada, usuarioId]
+    );
+
+    if (!updated.rows.length) {
+      return res.status(404).json({
+        error: { code: 'MONITOR_NOT_FOUND', message: 'Monitor not found' },
+      });
+    }
+
+    res.json({ mensaje: 'Perfil de monitor actualizado', data: updated.rows[0] });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({
+        error: { code: 'EMAIL_EXISTS', message: 'Email already exists' },
+      });
+    }
+    next(err);
+  }
+};
+
 // GET /api/admin/jovenes - Obtener todos los jóvenes
 const getJovenes = async (req, res, next) => {
   try {
@@ -1770,6 +1916,9 @@ module.exports = {
   getAdminDashboard,
   getMonitorDashboard,
   getMonitorFicherosAdmin,
+  getMonitoresPerfiles,
+  getMonitorPerfilAdmin,
+  updateMonitorPerfilAdmin,
   getRegistrationLinks,
   getJovenes,
   createJovenAdmin,

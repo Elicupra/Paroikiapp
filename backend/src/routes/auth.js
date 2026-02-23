@@ -23,4 +23,11 @@ router.patch('/me/email', authMiddleware, authController.changeEmail);
 // PATCH /api/auth/me/profile
 router.patch('/me/profile', authMiddleware, authController.updateProfile);
 
+// GET /api/auth/me/profile
+router.get('/me/profile', authMiddleware, authController.getMyProfile);
+
+// GET/PATCH /api/auth/me/notifications
+router.get('/me/notifications', authMiddleware, authController.getMyNotifications);
+router.patch('/me/notifications', authMiddleware, authController.updateMyNotifications);
+
 module.exports = router;

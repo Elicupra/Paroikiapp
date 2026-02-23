@@ -74,6 +74,28 @@ async function ensureAdvancedSchema() {
   `);
 
   await pool.query(`
+    ALTER TABLE usuarios
+    ADD COLUMN IF NOT EXISTS notificacion_email TEXT;
+  `);
+
+  await pool.query(`
+    ALTER TABLE usuarios
+    ADD COLUMN IF NOT EXISTS notificacion_webhook TEXT;
+  `);
+
+  await pool.query(`
+    ALTER TABLE usuarios
+    ADD COLUMN IF NOT EXISTS notificacion_email_habilitada BOOLEAN DEFAULT true;
+  `);
+
+  await pool.query(`
+    UPDATE usuarios
+    SET notificacion_email = email
+    WHERE (notificacion_email IS NULL OR notificacion_email = '')
+      AND email IS NOT NULL;
+  `);
+
+  await pool.query(`
     INSERT INTO configuracion (clave, valor, tipo)
     VALUES
       ('app_nombre', 'Paroikiapp', 'texto'),
