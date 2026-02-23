@@ -6,6 +6,19 @@ const normalizeRole = (role) => role === 'administrador' ? 'organizador' : role;
 let hasTipoEventoColumnCache = null;
 let hasAsignacionEventosTableCache = null;
 
+const allowedConfigKeys = new Set([
+  'app_nombre',
+  'parroquia_nombre',
+  'parroquia_texto',
+  'parroquia_logo',
+  'color_primario',
+  'color_secundario',
+  'color_acento',
+  'contacto_email',
+  'contacto_telefono',
+  'contacto_direccion',
+]);
+
 const getLegacyTipoFromNombre = (nombre = '') => {
   const normalized = String(nombre)
     .toLowerCase()
@@ -778,6 +791,194 @@ const getRegistrationLinks = async (req, res, next) => {
       data: links,
       total: links.length,
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/admin/configuracion
+const getConfiguracion = async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT clave, valor, tipo
+       FROM configuracion
+       ORDER BY clave ASC`
+    );
+
+    res.json({ data: result.rows, total: result.rows.length });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PUT /api/admin/configuracion
+const updateConfiguracion = async (req, res, next) => {
+  try {
+    const payload = Array.isArray(req.body)
+      ? req.body
+      : Array.isArray(req.body?.items)
+        ? req.body.items
+        : [];
+
+    if (!payload.length) {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_PAYLOAD',
+          message: 'Body must be an array of { clave, valor }',
+        },
+      });
+    }
+
+    for (const item of payload) {
+      const clave = String(item?.clave || '').trim();
+      const valor = String(item?.valor ?? '').trim();
+
+      if (!allowedConfigKeys.has(clave)) {
+        return res.status(400).json({
+          error: {
+            code: 'INVALID_CONFIG_KEY',
+            message: `Clave no permitida: ${clave}`,
+          },
+        });
+      }
+
+      if (clave.startsWith('color_') && !/^#[0-9A-Fa-f]{6}$/.test(valor)) {
+        return res.status(400).json({
+          error: {
+            code: 'INVALID_COLOR',
+            message: `Valor inválido para ${clave}`,
+          },
+        });
+      }
+
+      if (clave === 'contacto_email' && valor && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor)) {
+        return res.status(400).json({
+          error: {
+            code: 'INVALID_EMAIL',
+            message: 'Formato de email inválido',
+          },
+        });
+      }
+
+      await pool.query(
+        `UPDATE configuracion SET valor = $2 WHERE clave = $1`,
+        [clave, valor]
+      );
+    }
+
+    const updated = await pool.query(
+      `SELECT clave, valor, tipo FROM configuracion ORDER BY clave ASC`
+    );
+    res.json({ mensaje: 'Configuración actualizada', data: updated.rows, total: updated.rows.length });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/admin/dashboard
+const getAdminDashboard = async (req, res, next) => {
+  try {
+    const totals = await pool.query(
+      `SELECT
+        (SELECT COUNT(*)::int FROM eventos WHERE activo = true) as total_eventos,
+        (SELECT COUNT(*)::int FROM monitores WHERE activo = true) as total_monitores,
+        (SELECT COUNT(*)::int FROM jovenes) as total_jovenes,
+        (SELECT COALESCE(SUM(CASE WHEN pagado = true THEN cantidad - COALESCE(descuento, 0) ELSE 0 END), 0) FROM pagos) as recaudacion_global`
+    );
+
+    res.json({ data: totals.rows[0] || { total_eventos: 0, total_monitores: 0, total_jovenes: 0, recaudacion_global: 0 } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/admin/monitores/:monitorId/dashboard
+const getMonitorDashboard = async (req, res, next) => {
+  try {
+    const { monitorId } = req.params;
+    const withAsignaciones = await hasAsignacionEventosTable();
+
+    const monitorExists = await pool.query(
+      `SELECT m.id, u.nombre_mostrado
+       FROM monitores m
+       JOIN usuarios u ON u.id = m.usuario_id
+       WHERE m.id = $1`,
+      [monitorId]
+    );
+
+    if (!monitorExists.rows.length) {
+      return res.status(404).json({
+        error: { code: 'MONITOR_NOT_FOUND', message: 'Monitor not found' },
+      });
+    }
+
+    const eventos = await pool.query(
+      withAsignaciones
+        ? `SELECT e.id as evento_id, e.nombre, ae.activo, ae.max_jovenes
+           FROM asignacion_eventos ae
+           JOIN eventos e ON e.id = ae.evento_id
+           WHERE ae.monitor_id = $1
+           ORDER BY e.nombre`
+        : `SELECT e.id as evento_id, e.nombre, true as activo, NULL::int as max_jovenes
+           FROM monitores m
+           JOIN eventos e ON e.id = m.evento_id
+           WHERE m.id = $1
+           ORDER BY e.nombre`,
+      [monitorId]
+    );
+
+    const jovenesPorEvento = await pool.query(
+      `SELECT j.evento_id, e.nombre as evento_nombre, COUNT(j.id)::int as total_jovenes
+       FROM jovenes j
+       JOIN eventos e ON e.id = j.evento_id
+       WHERE j.monitor_id = $1
+       GROUP BY j.evento_id, e.nombre
+       ORDER BY e.nombre`,
+      [monitorId]
+    );
+
+    const recaudacion = await pool.query(
+      `SELECT COALESCE(SUM(CASE WHEN p.pagado = true THEN p.cantidad - COALESCE(p.descuento, 0) ELSE 0 END), 0) as total
+       FROM jovenes j
+       LEFT JOIN pagos p ON p.joven_id = j.id
+       WHERE j.monitor_id = $1`,
+      [monitorId]
+    );
+
+    res.json({
+      data: {
+        monitor: monitorExists.rows[0],
+        eventos: eventos.rows,
+        jovenes_por_evento: jovenesPorEvento.rows,
+        recaudacion: Number(recaudacion.rows[0]?.total || 0),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/admin/monitores/:monitorId/ficheros
+const getMonitorFicherosAdmin = async (req, res, next) => {
+  try {
+    const { monitorId } = req.params;
+
+    const monitorExists = await pool.query('SELECT id FROM monitores WHERE id = $1', [monitorId]);
+    if (!monitorExists.rows.length) {
+      return res.status(404).json({
+        error: { code: 'MONITOR_NOT_FOUND', message: 'Monitor not found' },
+      });
+    }
+
+    const result = await pool.query(
+      `SELECT id, monitor_id, nombre_original, mime_type, subido_en
+       FROM monitor_ficheros
+       WHERE monitor_id = $1
+       ORDER BY subido_en DESC`,
+      [monitorId]
+    );
+
+    res.json({ data: result.rows, total: result.rows.length });
   } catch (err) {
     next(err);
   }
@@ -1564,6 +1765,11 @@ module.exports = {
   revokeMonitorTokenByEvento,
   updateMonitorMaxJovenes,
   revokeMonitorToken,
+  getConfiguracion,
+  updateConfiguracion,
+  getAdminDashboard,
+  getMonitorDashboard,
+  getMonitorFicherosAdmin,
   getRegistrationLinks,
   getJovenes,
   createJovenAdmin,

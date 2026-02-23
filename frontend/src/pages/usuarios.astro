@@ -4,129 +4,75 @@ import Layout from '../layouts/Layout.astro';
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 ---
 
-<Layout title="Gestion de Usuarios">
+<Layout title="Usuarios (Jóvenes)">
   <div style="max-width: 1400px; margin: 2rem auto; padding: 0 1rem;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-      <h2 style="margin: 0;">Gestion de Usuarios</h2>
-      <button id="btnNuevoUsuario" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">
-        + Nuevo Usuario
-      </button>
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+      <h2 style="margin: 0;">Usuarios · Jóvenes</h2>
+      <button id="btnToggleSearch" style="padding: 0.5rem 0.9rem; border: 1px solid #d1d5db; border-radius: 0.5rem; background: white; cursor: pointer;">🔍 Buscar</button>
     </div>
 
-    <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem;">
-      <label style="font-weight: 600;">Filtro:</label>
-      <select id="rolFilter" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.5rem;">
-        <option value="todos">Todos</option>
-        <option value="monitor">Monitores</option>
-        <option value="organizador">Organizadores</option>
-        <option value="administrador">Administradores</option>
-      </select>
-      <select id="estadoFilter" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.5rem;">
-        <option value="todos">Todos</option>
-        <option value="activos">Activos</option>
-        <option value="inactivos">Inactivos</option>
-      </select>
-      <button id="btnRefrescar" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; background: white; border-radius: 0.5rem; cursor: pointer;">Refrescar</button>
-    </div>
+    <div id="scopeInfo" style="display:none; margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 0.5rem; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af;"></div>
 
-    <div id="loading" style="text-align: center; padding: 3rem;">
-      <p style="color: #666;">Cargando usuarios...</p>
-    </div>
-
-    <div id="usuariosContainer" style="display: none;"></div>
-
-    <div id="message" style="margin-top: 1rem; padding: 1rem; border-radius: 0.5rem; display: none;"></div>
-  </div>
-
-  <!-- Modal crear/editar usuario -->
-  <div id="modalUsuario" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
-    <div style="min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 2rem;">
-      <div style="background: white; border-radius: 1rem; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
-        <div style="padding: 2rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
-          <h3 id="modalUserTitle" style="margin: 0; font-size: 1.5rem;">Nuevo Usuario</h3>
-          <button id="btnCerrarUsuario" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; padding: 0; width: 2rem; height: 2rem;">&times;</button>
-        </div>
-
-        <form id="formUsuario" style="padding: 2rem;">
-          <input type="hidden" id="usuario_id" />
-          <div id="modalMessageUsuario" style="display: none; margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 0.5rem; font-weight: 500;"></div>
-
-          <div style="display: grid; gap: 1.25rem;">
-            <div>
-              <label for="nombre_mostrado" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Nombre para mostrar *</label>
-              <input type="text" id="nombre_mostrado" required style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem;" />
-            </div>
-
-            <div>
-              <label for="email" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Email *</label>
-              <input type="email" id="email" required style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem;" />
-            </div>
-
-            <div>
-              <label for="rol" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Rol *</label>
-              <select id="rol" required style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; background: white;">
-                <option value="monitor">Monitor</option>
-                <option value="organizador">Organizador</option>
-              </select>
-            </div>
-
-            <div id="passwordContainer">
-              <label for="password_temporal" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Password temporal</label>
-              <input type="text" id="password_temporal" placeholder="Opcional" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem;" />
-              <small style="color: #6b7280;">Si no se indica, se generara automaticamente.</small>
-            </div>
-
-            <div id="activoContainer" style="display: none;">
-              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                <input type="checkbox" id="activo" style="width: 1.25rem; height: 1.25rem; cursor: pointer;" />
-                <span style="font-weight: 600;">Usuario Activo</span>
-              </label>
-            </div>
-          </div>
-
-          <div style="display: flex; gap: 1rem; margin-top: 2rem; justify-content: flex-end;">
-            <button type="button" id="btnCancelarUsuario" style="padding: 0.75rem 1.5rem; border: 1px solid #d1d5db; background: white; color: #374151; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">Cancelar</button>
-            <button type="submit" style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">Guardar</button>
-          </div>
-        </form>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
+      <div>
+        <label for="eventoFilter" style="display:block; margin-bottom:0.35rem; font-weight:600;">Evento</label>
+        <select id="eventoFilter" style="width:100%; padding:0.6rem; border:1px solid #d1d5db; border-radius:0.5rem;"></select>
+      </div>
+      <div id="monitorFilterWrap" style="display:none;">
+        <label for="monitorFilter" style="display:block; margin-bottom:0.35rem; font-weight:600;">Monitor</label>
+        <select id="monitorFilter" style="width:100%; padding:0.6rem; border:1px solid #d1d5db; border-radius:0.5rem;"></select>
+      </div>
+      <div>
+        <label for="fechaFilter" style="display:block; margin-bottom:0.35rem; font-weight:600;">Fecha de registro</label>
+        <input id="fechaFilter" type="date" style="width:100%; padding:0.6rem; border:1px solid #d1d5db; border-radius:0.5rem;" />
+      </div>
+      <div style="display:flex; align-items:flex-end;">
+        <button id="btnRefrescar" style="width:100%; padding:0.6rem; border:1px solid #d1d5db; border-radius:0.5rem; background:white; cursor:pointer;">Refrescar</button>
       </div>
     </div>
-  </div>
 
-  <!-- Modal asignar eventos -->
-  <div id="modalAsignacion" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
-    <div style="min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 2rem;">
-      <div style="background: white; border-radius: 1rem; max-width: 800px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
-        <div style="padding: 2rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
-          <h3 id="modalAsignacionTitle" style="margin: 0; font-size: 1.5rem;">Asignar Eventos</h3>
-          <button id="btnCerrarAsignacion" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; padding: 0; width: 2rem; height: 2rem;">&times;</button>
+    <div id="searchBox" style="display:none; margin-bottom:1rem; background:white; border:1px solid #e5e7eb; border-radius:0.5rem; padding:0.9rem;">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.75rem;">
+        <div>
+          <label for="nombreFilter" style="display:block; margin-bottom:0.35rem; font-weight:600;">Nombre</label>
+          <input id="nombreFilter" type="text" placeholder="Filtrar por nombre" style="width:100%; padding:0.6rem; border:1px solid #d1d5db; border-radius:0.5rem;" />
         </div>
-
-        <div style="padding: 2rem;">
-          <div id="asignacionContent"></div>
+        <div>
+          <label for="apellidosFilter" style="display:block; margin-bottom:0.35rem; font-weight:600;">Apellidos</label>
+          <input id="apellidosFilter" type="text" placeholder="Filtrar por apellidos" style="width:100%; padding:0.6rem; border:1px solid #d1d5db; border-radius:0.5rem;" />
         </div>
       </div>
     </div>
+
+    <div id="loading" style="text-align:center; padding:3rem; color:#6b7280;">Cargando jóvenes...</div>
+    <div id="jovenesContainer" style="display:none;"></div>
+    <div id="message" style="display:none; margin-top:1rem; padding:0.9rem; border-radius:0.5rem;"></div>
   </div>
 
   <script define:vars={{ API_URL }}>
     // @ts-nocheck
     const accessToken = localStorage.getItem('accessToken');
+    const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
 
-    if (!accessToken) {
+    if (!accessToken || !currentUser) {
       window.location.href = '/login';
     }
 
-    let usuarios = [];
-    let eventos = [];
-    let editingUsuarioId = null;
-    let asignandoUsuarioId = null;
+    const role = currentUser?.rol;
+    const isAdmin = role === 'administrador' || role === 'organizador';
+    const isMonitor = role === 'monitor';
 
-    const modalUsuario = document.getElementById('modalUsuario');
-    const modalAsignacion = document.getElementById('modalAsignacion');
-    const formUsuario = document.getElementById('formUsuario');
+    if (!isAdmin && !isMonitor) {
+      window.location.href = '/';
+    }
+
+    let jovenes = [];
+    let eventosMap = new Map();
+
+    const container = document.getElementById('jovenesContainer');
+    const loading = document.getElementById('loading');
     const messageEl = document.getElementById('message');
-    const modalMessageEl = document.getElementById('modalMessageUsuario');
+    const scopeInfoEl = document.getElementById('scopeInfo');
 
     const escapeHtml = (value) => String(value ?? '')
       .replace(/&/g, '&amp;')
@@ -134,340 +80,6 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
-
-    function showModalMessage(text, type) {
-      modalMessageEl.textContent = text;
-      modalMessageEl.style.display = 'block';
-      modalMessageEl.style.backgroundColor = type === 'success' ? '#d1fae5' : '#fee2e2';
-      modalMessageEl.style.color = type === 'success' ? '#065f46' : '#991b1b';
-      modalMessageEl.style.border = `1px solid ${type === 'success' ? '#a7f3d0' : '#fecaca'}`;
-    }
-
-    function clearModalMessage() {
-      modalMessageEl.style.display = 'none';
-      modalMessageEl.textContent = '';
-    }
-
-    async function loadEventosBase() {
-      try {
-        const response = await fetch(`${API_URL}/api/admin/eventos?incluir_pasados=true`, {
-          headers: { 'Authorization': 'Bearer ' + accessToken },
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-          eventos = data.data || [];
-        }
-      } catch (error) {
-        console.error('Error loading eventos base:', error);
-      }
-    }
-
-    async function loadUsuarios() {
-      try {
-        document.getElementById('loading').style.display = 'block';
-        document.getElementById('usuariosContainer').style.display = 'none';
-
-        const response = await fetch(`${API_URL}/api/admin/usuarios`, {
-          headers: { 'Authorization': 'Bearer ' + accessToken },
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-          if (response.status === 401) {
-            localStorage.clear();
-            window.location.href = '/login';
-            return;
-          }
-          throw new Error(data.error?.message || 'Error al cargar usuarios');
-        }
-
-        usuarios = data.data || [];
-        renderUsuarios();
-      } catch (error) {
-        showMessage('Error al cargar usuarios: ' + error.message, 'error');
-      } finally {
-        document.getElementById('loading').style.display = 'none';
-      }
-    }
-
-    function renderUsuarios() {
-      const container = document.getElementById('usuariosContainer');
-      container.style.display = 'block';
-
-      const rolFilter = document.getElementById('rolFilter').value;
-      const estadoFilter = document.getElementById('estadoFilter').value;
-
-      let filtered = usuarios;
-      if (rolFilter !== 'todos') {
-        filtered = filtered.filter(u => u.rol === rolFilter);
-      }
-      if (estadoFilter !== 'todos') {
-        filtered = filtered.filter(u => estadoFilter === 'activos' ? u.activo : !u.activo);
-      }
-
-      if (filtered.length === 0) {
-        container.innerHTML = '<p style="text-align: center; padding: 3rem; color: #666;">No hay usuarios en este filtro</p>';
-        return;
-      }
-
-      container.innerHTML = `
-        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-          <thead>
-            <tr style="background: #f9fafb;">
-              <th style="padding: 1rem; text-align: left;">Nombre</th>
-              <th style="padding: 1rem; text-align: left;">Email</th>
-              <th style="padding: 1rem; text-align: left;">Rol</th>
-              <th style="padding: 1rem; text-align: left;">Jóvenes</th>
-              <th style="padding: 1rem; text-align: left;">Estado</th>
-              <th style="padding: 1rem; text-align: left;">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filtered.map(u => `
-              <tr style="border-bottom: 1px solid #e5e7eb;">
-                <td style="padding: 1rem;">${escapeHtml(u.nombre_mostrado)}</td>
-                <td style="padding: 1rem;">${escapeHtml(u.email)}</td>
-                <td style="padding: 1rem; text-transform: capitalize;">${escapeHtml(u.rol)}</td>
-                <td style="padding: 1rem;">${u.rol === 'monitor' ? (u.jovenes_count || 0) : '-'}</td>
-                <td style="padding: 1rem;">
-                  <span style="padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.875rem; background: ${u.activo ? '#d1fae5' : '#fee2e2'}; color: ${u.activo ? '#065f46' : '#991b1b'};">
-                    ${u.activo ? 'Activo' : 'Inactivo'}
-                  </span>
-                </td>
-                <td style="padding: 1rem;">
-                  <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                    <button onclick="editUsuario('${u.id}')" style="padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">Editar</button>
-                    ${u.rol === 'monitor' ? `<button class="btn-asignar" data-user-id="${u.id}" data-user-name="${escapeHtml(u.nombre_mostrado)}" style="padding: 0.5rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">Asignar Eventos</button>` : ''}
-                    <button onclick="toggleActivo('${u.id}')" style="padding: 0.5rem 1rem; background: ${u.activo ? '#ef4444' : '#10b981'}; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">
-                      ${u.activo ? 'Desactivar' : 'Activar'}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
-    }
-
-    document.getElementById('btnNuevoUsuario').onclick = () => {
-      editingUsuarioId = null;
-      formUsuario.reset();
-      clearModalMessage();
-      document.getElementById('usuario_id').value = '';
-      document.getElementById('modalUserTitle').textContent = 'Nuevo Usuario';
-      document.getElementById('passwordContainer').style.display = 'block';
-      document.getElementById('activoContainer').style.display = 'none';
-      modalUsuario.style.display = 'block';
-    };
-
-    window.editUsuario = async (usuarioId) => {
-      try {
-        const response = await fetch(`${API_URL}/api/admin/usuarios/${usuarioId}`, {
-          headers: { 'Authorization': 'Bearer ' + accessToken },
-        });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error?.message);
-
-        const u = data.data;
-        editingUsuarioId = usuarioId;
-        clearModalMessage();
-        document.getElementById('usuario_id').value = u.id;
-        document.getElementById('nombre_mostrado').value = u.nombre_mostrado || '';
-        document.getElementById('email').value = u.email || '';
-        document.getElementById('rol').value = u.rol || 'monitor';
-        document.getElementById('activo').checked = u.activo;
-        document.getElementById('passwordContainer').style.display = 'none';
-        document.getElementById('activoContainer').style.display = 'block';
-        document.getElementById('modalUserTitle').textContent = 'Editar Usuario';
-        modalUsuario.style.display = 'block';
-      } catch (error) {
-        showMessage('Error al cargar usuario: ' + error.message, 'error');
-      }
-    };
-
-    window.toggleActivo = async (usuarioId) => {
-      try {
-        const response = await fetch(`${API_URL}/api/admin/usuarios/${usuarioId}/toggle-active`, {
-          method: 'PATCH',
-          headers: { 'Authorization': 'Bearer ' + accessToken },
-        });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error?.message);
-
-        showMessage('Estado actualizado', 'success');
-        loadUsuarios();
-      } catch (error) {
-        showMessage('Error al actualizar estado: ' + error.message, 'error');
-      }
-    };
-
-    formUsuario.onsubmit = async (e) => {
-      e.preventDefault();
-
-      try {
-        clearModalMessage();
-        const payload = {
-          nombre_mostrado: document.getElementById('nombre_mostrado').value,
-          email: document.getElementById('email').value,
-          rol: document.getElementById('rol').value,
-        };
-
-        if (!editingUsuarioId) {
-          const pass = document.getElementById('password_temporal').value.trim();
-          if (pass) payload.password_temporal = pass;
-        } else {
-          payload.activo = document.getElementById('activo').checked;
-        }
-
-        const url = editingUsuarioId
-          ? `${API_URL}/api/admin/usuarios/${editingUsuarioId}`
-          : `${API_URL}/api/admin/usuarios`;
-
-        const method = editingUsuarioId ? 'PUT' : 'POST';
-
-        const response = await fetch(url, {
-          method,
-          headers: {
-            'Authorization': 'Bearer ' + accessToken,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        });
-
-        let data = null;
-        try {
-          data = await response.json();
-        } catch (_) {
-          data = null;
-        }
-        if (!response.ok) {
-          const serverMessage = data?.error?.message || data?.message || `Error HTTP ${response.status}`;
-          throw new Error(serverMessage);
-        }
-
-        if (data.password_temporal) {
-          showModalMessage(`Usuario creado. Password temporal: ${data.password_temporal}`, 'success');
-          showMessage(`Usuario creado. Password temporal: ${data.password_temporal}`, 'success');
-        } else {
-          showModalMessage(`Usuario ${editingUsuarioId ? 'actualizado' : 'creado'} exitosamente`, 'success');
-          showMessage(`Usuario ${editingUsuarioId ? 'actualizado' : 'creado'} exitosamente`, 'success');
-        }
-
-        modalUsuario.style.display = 'none';
-        loadUsuarios();
-      } catch (error) {
-        showModalMessage('Error al guardar usuario: ' + error.message, 'error');
-      }
-    };
-
-    window.openAsignacion = async (usuarioId, nombre) => {
-      asignandoUsuarioId = usuarioId;
-      document.getElementById('modalAsignacionTitle').textContent = `Asignar Eventos - ${nombre}`;
-      modalAsignacion.style.display = 'block';
-      await renderAsignaciones();
-    };
-
-    async function renderAsignaciones() {
-      const container = document.getElementById('asignacionContent');
-      container.innerHTML = '<p style="color: #666;">Cargando asignaciones...</p>';
-
-      try {
-        const response = await fetch(`${API_URL}/api/admin/usuarios/${asignandoUsuarioId}/eventos`, {
-          headers: { 'Authorization': 'Bearer ' + accessToken },
-        });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error?.message);
-
-        const asignados = data.data || [];
-        const asignadosMap = new Map(asignados.map(a => [a.evento_id, a]));
-
-        container.innerHTML = `
-          <div style="display: grid; gap: 1rem;">
-            ${eventos.map(e => {
-              const asignado = asignadosMap.get(e.id);
-              const fechaInicio = e.fecha_inicio ? new Date(e.fecha_inicio).toLocaleDateString('es-ES') : 'N/A';
-              const fechaFin = e.fecha_fin ? new Date(e.fecha_fin).toLocaleDateString('es-ES') : 'N/A';
-              return `
-                <div style="border: 1px solid #e5e7eb; padding: 1rem; border-radius: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
-                  <div>
-                    <h4 style="margin: 0 0 0.25rem 0;">${escapeHtml(e.nombre)}</h4>
-                    <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">${escapeHtml(e.tipo)} | ${fechaInicio} - ${fechaFin}</p>
-                  </div>
-                  ${asignado ? `
-                    <button onclick="removeAsignacion('${asignado.monitor_id}')" style="padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: 0.5rem; cursor: pointer;">Quitar</button>
-                  ` : `
-                    <button onclick="assignEvento('${e.id}')" style="padding: 0.5rem 1rem; background: #10b981; color: white; border: none; border-radius: 0.5rem; cursor: pointer;">Asignar</button>
-                  `}
-                </div>
-              `;
-            }).join('')}
-          </div>
-        `;
-      } catch (error) {
-        container.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
-      }
-    }
-
-    window.assignEvento = async (eventoId) => {
-      try {
-        const response = await fetch(`${API_URL}/api/admin/monitores`, {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer ' + accessToken,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ usuario_id: asignandoUsuarioId, evento_id: eventoId }),
-        });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error?.message);
-
-        showMessage('Monitor asignado al evento', 'success');
-        renderAsignaciones();
-      } catch (error) {
-        showMessage('Error al asignar: ' + error.message, 'error');
-      }
-    };
-
-    window.removeAsignacion = async (monitorId) => {
-      try {
-        const response = await fetch(`${API_URL}/api/admin/monitores/${monitorId}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': 'Bearer ' + accessToken },
-        });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error?.message);
-
-        showMessage('Asignacion eliminada', 'success');
-        renderAsignaciones();
-      } catch (error) {
-        showMessage('Error al eliminar asignacion: ' + error.message, 'error');
-      }
-    };
-
-    document.getElementById('btnCerrarUsuario').onclick = () => { clearModalMessage(); modalUsuario.style.display = 'none'; };
-    document.getElementById('btnCancelarUsuario').onclick = () => { clearModalMessage(); modalUsuario.style.display = 'none'; };
-    document.getElementById('btnCerrarAsignacion').onclick = () => { modalAsignacion.style.display = 'none'; };
-
-    document.getElementById('rolFilter').onchange = renderUsuarios;
-    document.getElementById('estadoFilter').onchange = renderUsuarios;
-    document.getElementById('btnRefrescar').onclick = loadUsuarios;
-
-    document.getElementById('usuariosContainer').addEventListener('click', (e) => {
-      const button = e.target.closest('.btn-asignar');
-      if (!button) return;
-      const usuarioId = button.getAttribute('data-user-id');
-      const nombre = button.getAttribute('data-user-name') || 'Monitor';
-      if (usuarioId) {
-        window.openAsignacion(usuarioId, nombre);
-      }
-    });
 
     function showMessage(text, type) {
       messageEl.textContent = text;
@@ -477,6 +89,187 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
       setTimeout(() => { messageEl.style.display = 'none'; }, 5000);
     }
 
-    loadEventosBase().then(loadUsuarios);
+    function toDay(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return '';
+      return d.toISOString().slice(0, 10);
+    }
+
+    function getScopeInfo() {
+      const params = new URLSearchParams(window.location.search);
+      const scope = params.get('scope');
+      if (scope === 'mine') {
+        return isAdmin ? 'Mostrando vista filtrada por contexto de monitor.' : 'Mostrando tus jóvenes asignados.';
+      }
+      if (scope === 'all') {
+        return isAdmin ? 'Mostrando todos los jóvenes registrados.' : 'Mostrando tus jóvenes asignados.';
+      }
+      return isAdmin ? 'Vista completa de jóvenes (admin).' : 'Vista de tus jóvenes asignados.';
+    }
+
+    async function loadEventos() {
+      try {
+        const endpoint = isAdmin ? '/api/admin/eventos?incluir_pasados=true' : '/api/monitor/eventos';
+        const response = await fetch(`${API_URL}${endpoint}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const data = await response.json();
+        if (!response.ok) return;
+        const rows = Array.isArray(data.data) ? data.data : [];
+        eventsFromRows(rows);
+      } catch (_) {
+      }
+    }
+
+    function eventsFromRows(rows) {
+      eventosMap = new Map();
+      for (const e of rows) {
+        eventosMap.set(String(e.id), e.nombre || e.tipo || 'Evento');
+      }
+    }
+
+    async function loadJovenes() {
+      try {
+        loading.style.display = 'block';
+        container.style.display = 'none';
+
+        const endpoint = isAdmin ? '/api/admin/jovenes' : '/api/monitor/jovenes';
+        const response = await fetch(`${API_URL}${endpoint}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.clear();
+            window.location.href = '/login';
+            return;
+          }
+          throw new Error(data.error?.message || 'No se pudieron cargar los jóvenes');
+        }
+
+        jovenes = Array.isArray(data.data) ? data.data : [];
+        fillFilters();
+        renderJovenes();
+      } catch (error) {
+        showMessage(`Error al cargar jóvenes: ${error.message}`, 'error');
+      } finally {
+        loading.style.display = 'none';
+      }
+    }
+
+    function fillFilters() {
+      const eventoSel = document.getElementById('eventoFilter');
+      const monitorSel = document.getElementById('monitorFilter');
+      const monitorWrap = document.getElementById('monitorFilterWrap');
+
+      const eventoOptions = ['<option value="todos">Todos los eventos</option>'];
+      const monitorNames = new Map();
+
+      for (const j of jovenes) {
+        const eventoId = String(j.evento_id || '');
+        const eventoNombre = j.evento_nombre || eventosMap.get(eventoId) || `Evento ${eventoId || '-'}`;
+        if (eventoId && !eventoOptions.some((o) => o.includes(`value="${eventoId}"`))) {
+          eventoOptions.push(`<option value="${eventoId}">${escapeHtml(eventoNombre)}</option>`);
+        }
+
+        if (isAdmin) {
+          const monitorId = String(j.usuario_id || '');
+          const monitorNombre = j.monitor_nombre || '-';
+          if (monitorId) monitorNames.set(monitorId, monitorNombre);
+        }
+      }
+
+      eventoSel.innerHTML = eventoOptions.join('');
+
+      if (isAdmin) {
+        monitorWrap.style.display = 'block';
+        const monitorOptions = ['<option value="todos">Todos los monitores</option>'];
+        for (const [id, name] of monitorNames.entries()) {
+          monitorOptions.push(`<option value="${id}">${escapeHtml(name)}</option>`);
+        }
+        monitorSel.innerHTML = monitorOptions.join('');
+      } else {
+        monitorWrap.style.display = 'none';
+      }
+    }
+
+    function renderJovenes() {
+      const eventoFilter = document.getElementById('eventoFilter').value;
+      const monitorFilter = isAdmin ? document.getElementById('monitorFilter').value : 'todos';
+      const fechaFilter = document.getElementById('fechaFilter').value;
+      const nombreFilter = document.getElementById('nombreFilter').value.trim().toLowerCase();
+      const apellidosFilter = document.getElementById('apellidosFilter').value.trim().toLowerCase();
+
+      const filtered = jovenes.filter((j) => {
+        if (eventoFilter !== 'todos' && String(j.evento_id || '') !== eventoFilter) return false;
+        if (monitorFilter !== 'todos' && String(j.usuario_id || '') !== monitorFilter) return false;
+        if (fechaFilter && toDay(j.creado_en) !== fechaFilter) return false;
+        if (nombreFilter && !String(j.nombre || '').toLowerCase().includes(nombreFilter)) return false;
+        if (apellidosFilter && !String(j.apellidos || '').toLowerCase().includes(apellidosFilter)) return false;
+        return true;
+      });
+
+      container.style.display = 'block';
+
+      if (!filtered.length) {
+        container.innerHTML = '<p style="text-align:center; padding:2rem; color:#6b7280;">No hay jóvenes con los filtros actuales.</p>';
+        return;
+      }
+
+      container.innerHTML = `
+        <div style="overflow:auto; background:white; border:1px solid #e5e7eb; border-radius:0.75rem;">
+          <table style="width:100%; border-collapse:collapse; min-width:900px;">
+            <thead>
+              <tr style="background:#f9fafb; border-bottom:1px solid #e5e7eb;">
+                <th style="padding:0.75rem; text-align:left;">Nombre</th>
+                <th style="padding:0.75rem; text-align:left;">Apellidos</th>
+                <th style="padding:0.75rem; text-align:left;">Evento</th>
+                <th style="padding:0.75rem; text-align:left;">Monitor</th>
+                <th style="padding:0.75rem; text-align:left;">Documentos</th>
+                <th style="padding:0.75rem; text-align:left;">Pagos</th>
+                <th style="padding:0.75rem; text-align:left;">Registro</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filtered.map((j) => {
+                const eventoNombre = j.evento_nombre || eventosMap.get(String(j.evento_id || '')) || '-';
+                const monitorNombre = isAdmin ? (j.monitor_nombre || '-') : (currentUser?.nombre_mostrado || 'Mi monitor');
+                return `
+                  <tr style="border-bottom:1px solid #f3f4f6;">
+                    <td style="padding:0.75rem;">${escapeHtml(j.nombre)}</td>
+                    <td style="padding:0.75rem;">${escapeHtml(j.apellidos)}</td>
+                    <td style="padding:0.75rem;">${escapeHtml(eventoNombre)}</td>
+                    <td style="padding:0.75rem;">${escapeHtml(monitorNombre)}</td>
+                    <td style="padding:0.75rem;">${Number(j.documentos_count || 0)}</td>
+                    <td style="padding:0.75rem;">${Number(j.pagos_count || 0)}</td>
+                    <td style="padding:0.75rem;">${toDay(j.creado_en) || '-'}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    document.getElementById('btnToggleSearch').addEventListener('click', () => {
+      const searchBox = document.getElementById('searchBox');
+      searchBox.style.display = searchBox.style.display === 'none' ? 'block' : 'none';
+    });
+
+    ['eventoFilter', 'monitorFilter', 'fechaFilter', 'nombreFilter', 'apellidosFilter'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', renderJovenes);
+      if (el && el.tagName === 'SELECT') el.addEventListener('change', renderJovenes);
+    });
+
+    document.getElementById('btnRefrescar').addEventListener('click', loadJovenes);
+
+    scopeInfoEl.textContent = getScopeInfo();
+    scopeInfoEl.style.display = 'block';
+
+    loadEventos().then(loadJovenes);
   </script>
 </Layout>

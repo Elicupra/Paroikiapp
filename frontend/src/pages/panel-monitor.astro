@@ -1,0 +1,28 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Panel de Monitor">
+  <div style="max-width: 900px; margin: 2rem auto; padding: 0 1rem;">
+    <h2>Panel de Monitor</h2>
+    <p style="color:#6b7280; margin: 0.75rem 0 1rem 0;">Redirigiendo al panel operativo...</p>
+    <p><a href="/monitor">Si no redirige automáticamente, pulsa aquí.</a></p>
+  </div>
+
+  <script>
+    // @ts-nocheck
+    const token = localStorage.getItem('accessToken');
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+
+    if (!token || !user) {
+      window.location.href = '/login';
+    } else {
+      const isAllowed = user.rol === 'monitor' || user.rol === 'organizador' || user.rol === 'administrador';
+      if (!isAllowed) {
+        window.location.href = '/';
+      } else {
+        window.location.href = '/monitor';
+      }
+    }
+  </script>
+</Layout>

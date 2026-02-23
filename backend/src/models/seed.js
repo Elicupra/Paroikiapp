@@ -9,6 +9,30 @@ async function seed() {
     // Establecer el schema
     await client.query('SET search_path TO paroikiapp;');
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS configuracion (
+        clave TEXT PRIMARY KEY,
+        valor TEXT NOT NULL,
+        tipo TEXT DEFAULT 'texto'
+      );
+    `);
+
+    await client.query(`
+      INSERT INTO configuracion (clave, valor, tipo)
+      VALUES
+        ('app_nombre', 'Paroikiapp', 'texto'),
+        ('parroquia_nombre', 'Parroquia San Miguel', 'texto'),
+        ('parroquia_texto', 'Bienvenidos a nuestra parroquia. Aquí encontrarás información sobre nuestros eventos y actividades para jóvenes de nuestra comunidad.', 'texto'),
+        ('parroquia_logo', '', 'imagen'),
+        ('color_primario', '#2563eb', 'color'),
+        ('color_secundario', '#1e40af', 'color'),
+        ('color_acento', '#f59e0b', 'color'),
+        ('contacto_email', '', 'texto'),
+        ('contacto_telefono', '', 'texto'),
+        ('contacto_direccion', '', 'texto')
+      ON CONFLICT (clave) DO NOTHING;
+    `);
+
     // 1. Crear eventos
     const eventoResult = await client.query(`
       INSERT INTO eventos (nombre, tipo, descripcion, precio_base, fecha_inicio, fecha_fin)

@@ -9,6 +9,27 @@ interface Props {
 }
 
 const { title, description = "Registro de eventos juveniles", showNavbar = true } = Astro.props;
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
+
+let appName = 'Paroikiapp';
+let colorPrimario = '#3b82f6';
+let colorSecundario = '#10b981';
+let colorAcento = '#f59e0b';
+
+try {
+  const response = await fetch(`${API_URL}/api/public/configuracion`);
+  if (response.ok) {
+    const payload = await response.json();
+    const items = Array.isArray(payload?.data) ? payload.data : [];
+    const map = new Map(items.map((item) => [String(item.clave), String(item.valor)]));
+
+    appName = String(map.get('app_nombre') || appName);
+    colorPrimario = String(map.get('color_primario') || colorPrimario);
+    colorSecundario = String(map.get('color_secundario') || colorSecundario);
+    colorAcento = String(map.get('color_acento') || colorAcento);
+  }
+} catch (_) {}
 ---
 
 <!doctype html>
@@ -17,11 +38,12 @@ const { title, description = "Registro de eventos juveniles", showNavbar = true 
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
-    <title>{title} - Paroikiapp</title>
+    <title>{title} - {appName}</title>
     <style is:global>
       :root {
         --color-primary: #3b82f6;
         --color-secondary: #10b981;
+        --color-accent: #f59e0b;
         --color-danger: #ef4444;
         --color-gray-light: #f3f4f6;
         --color-gray-dark: #1f2937;
@@ -109,13 +131,23 @@ const { title, description = "Registro de eventos juveniles", showNavbar = true 
       }
     </style>
   </head>
-  <body>
-    {showNavbar && <Navbar />}
+  <body data-color-primary={colorPrimario} data-color-secondary={colorSecundario} data-color-accent={colorAcento}>
+    {showNavbar && <Navbar appName={appName} />}
 
     <slot />
 
     <script>
       // @ts-nocheck
+      const bodyEl = document.body;
+      const root = document.documentElement;
+      const dynamicPrimary = bodyEl?.dataset?.colorPrimary;
+      const dynamicSecondary = bodyEl?.dataset?.colorSecondary;
+      const dynamicAccent = bodyEl?.dataset?.colorAccent;
+
+      if (dynamicPrimary) root.style.setProperty('--color-primary', dynamicPrimary);
+      if (dynamicSecondary) root.style.setProperty('--color-secondary', dynamicSecondary);
+      if (dynamicAccent) root.style.setProperty('--color-accent', dynamicAccent);
+
       const savedTheme = localStorage.getItem('theme') || 'light';
       document.documentElement.setAttribute('data-theme', savedTheme);
     </script>

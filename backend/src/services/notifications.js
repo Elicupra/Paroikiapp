@@ -101,9 +101,41 @@ const sendPasswordChangeEmail = async (email, nombreMostrado) => {
   }
 };
 
+const sendPublicContactNotification = async ({ nombre, email, asunto, mensaje }) => {
+  if (!transporter) initializeEmailService();
+
+  const target = process.env.CONTACT_TO || process.env.NOTIFY_FROM || process.env.SMTP_USER;
+  if (!target) {
+    return;
+  }
+
+  const subject = `Contacto: ${asunto}`;
+  const htmlContent = `
+    <h2>Nuevo mensaje de contacto</h2>
+    <p><strong>Nombre:</strong> ${nombre}</p>
+    <p><strong>Email:</strong> ${email}</p>
+    <p><strong>Asunto:</strong> ${asunto}</p>
+    <p><strong>Mensaje:</strong></p>
+    <p>${mensaje}</p>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: process.env.NOTIFY_FROM,
+      to: target,
+      replyTo: email,
+      subject,
+      html: htmlContent,
+    });
+  } catch (err) {
+    console.error('Contact email send error:', err);
+  }
+};
+
 module.exports = {
   initializeEmailService,
   sendNewYouthNotification,
   sendDocumentNotification,
   sendPasswordChangeEmail,
+  sendPublicContactNotification,
 };

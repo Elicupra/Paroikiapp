@@ -1,250 +1,123 @@
-# TODO - Funcionalidades Pendientes Paroikiapp
+# TODO — Roadmap de Reiteración (base MD/V2)
 
-## ⚠️ URGENTES
+## Objetivo
 
-### 1. Crear Eventos (Admin)
-**Estado:** No implementado  
-**Prioridad:** Alta  
-**Descripción:**
-- Formulario para crear nuevos eventos desde el panel de administrador
-- Campos necesarios:
-  - Nombre del evento
-  - Tipo (campamento, retiro, etc.)
-  - Descripción
-  - Precio base
-  - Fecha de inicio
-  - Fecha de fin
-- **Backend:** Endpoint POST /api/admin/eventos ya existe
-- **Frontend:** Falta crear el formulario y la lógica
+Reorientar el repositorio para converger con Iteración 2 (`MD/V2/*`) sin romper lo ya estable en v1.3.x.
 
 ---
 
-### 2. Gestionar Jóvenes (Admin)
-**Estado:** Vista básica implementada, falta CRUD  
-**Prioridad:** Alta  
-**Descripción:**
-- Vista detallada de cada joven
-- Formulario para crear jóvenes manualmente (sin registro público)
-- Editar información de jóvenes existentes
-- Eliminar jóvenes
-- Asignar/reasignar jóvenes a eventos
-- Ver historial completo (pagos, documentos)
+## Fase 0 — Ya implementado en código
 
-**Endpoints necesarios:**
-- POST /api/admin/jovenes (crear)
-- PUT /api/admin/jovenes/:id (editar)
-- DELETE /api/admin/jovenes/:id (eliminar)
+- [x] Admin: CRUD de eventos.
+- [x] Admin: CRUD de usuarios + asignación monitor↔evento.
+- [x] Admin: CRUD de jóvenes + perfil detallado.
+- [x] Monitor: ver eventos activos asignados.
+- [x] Monitor: ver/editar jóvenes asignados.
+- [x] Monitor: validar documentos y gestionar pagos.
+- [x] Auth: actualización de perfil, email y contraseña.
+- [x] Registro/Ficha: enlace personal + edición + documentos.
+- [x] Smoke tests: `smoke:api`, `smoke:youth`, `smoke:roles`.
 
 ---
 
-## 📋 IMPORTANTES
+## Fase 1 — Base backend Iteración 2 (prioridad alta)
 
-### 3. Panel de Detalle de Evento
-**Estado:** No implementado  
-**Prioridad:** Media-Alta  
-**Descripción:**
-- Vista completa de un evento específico
-- Información del evento (nombre, fechas, precio, descripción)
-- Lista de todos los jóvenes registrados en ese evento
-- Resumen de pagos del evento
-- Estadísticas:
-  - Total participantes
-  - Total recaudado
-  - Documentación pendiente
-  - Pagos pendientes
-
-**Endpoints necesarios:**
-- GET /api/admin/eventos/:id (existe como /jovenes pero necesita más datos)
-- GET /api/admin/eventos/:id/estadisticas (nuevo)
-
----
-
-### 5. Subir Documentos (Monitor)
-**Estado:** Backend parcial, frontend no implementado  
-**Prioridad:** Media-Alta  
-**Descripción:**
-- Interface para que los monitores suban documentos en nombre de los jóvenes
-- Tipos de documentos:
-  - Autorización paterna
-  - Documentación médica
-  - Seguro
-  - Otros documentos requeridos
-- Ver lista de documentos subidos por joven
-- Descargar documentos existentes
-
-**Backend pendiente:**
-- POST /api/monitor/documentos (con multer para files)
-- GET /api/monitor/jovenes/:jovenId/documentos
-- GET /api/monitor/documentos/:id/download
-- DELETE /api/monitor/documentos/:id
-
-**Frontend pendiente:**
-- Formulario de upload con drag & drop
-- Preview de archivos
-- Lista de documentos con iconos por tipo
-- Botones de descarga/eliminar
+- [x] Crear tabla `configuracion` + seed por defecto (según `MD/V2/SKILL.md`).
+- [x] Endpoint `GET /api/admin/configuracion`.
+- [x] Endpoint `PUT /api/admin/configuracion` con whitelist de claves.
+- [x] Crear tabla `monitor_ficheros`.
+- [ ] Endpoints monitor ficheros:
+  - [x] `GET /api/monitor/ficheros`
+  - [x] `POST /api/monitor/ficheros`
+  - [x] `DELETE /api/monitor/ficheros/:ficheroId`
+- [ ] Endpoint admin para ficheros de monitor:
+  - [x] `GET /api/admin/monitores/:monitorId/ficheros`
+- [ ] Endpoint dashboard global admin:
+  - [x] `GET /api/admin/dashboard`
+- [ ] Endpoint mini-dashboard por monitor:
+  - [x] `GET /api/admin/monitores/:monitorId/dashboard`
+- [ ] Endpoint público de contacto:
+  - [x] `POST /api/public/contacto` con rate limiting y validación.
 
 ---
 
-### 6. Panel del Joven (Después de Registro)
-**Estado:** No implementado  
-**Prioridad:** Media  
-**Descripción:**
-- Página para que el joven vea su perfil después de registrarse
-- Información personal
-- Estado del evento (fechas, ubicación)
-- Estado de pagos
-- Subir documentos personales:
-  - DNI/Pasaporte
-  - Foto
-  - Otros documentos requeridos
-- Ver estado de verificación de documentos
+## Fase 2 — UX/Navegación Iteración 2 (prioridad alta)
 
-**Endpoints necesarios:**
-- GET /api/joven/perfil (con token único o auth)
-- POST /api/joven/documentos
-- GET /api/joven/documentos
-- GET /api/joven/evento-info
+- [x] Navbar completa por rol y orden de Iteración 2.
+- [x] Página `/contacto` funcional.
+- [x] Página `/configuracion` (solo admin).
+- [x] Página `/panel-monitor` alineada al nuevo flujo.
+- [ ] Ajuste de `/monitor` para que sea gestión de monitores (solo admin).
+  - [ ] **Pospuesto intencionalmente**: se tomará acción en un bloque posterior dedicado para no mezclar con cierre de `eventos`/`usuarios`.
+- [x] `/usuarios` con filtros expandibles y contexto por rol.
+- [x] `/eventos` con filtros avanzados + vista tabla/cards.
+- [x] `Layout.astro` con variables de color/nombre/logo desde `configuracion`.
 
 ---
 
-### 7. Gestionar Documentos (Admin)
-**Estado:** No implementado  
-**Prioridad:** Media  
-**Descripción:**
-- Ver todos los documentos del sistema
-- Filtrar por:
-  - Evento
-  - Joven
-  - Tipo de documento
-  - Estado (pendiente verificación, aprobado, rechazado)
-- Validar/aprobar documentos
-- Descargar documentos
-- Eliminar documentos
-- Marcar documentos como verificados
+## Fase 3 — Manejo de errores y CORS (prioridad crítica)
 
-**Endpoints necesarios:**
-- GET /api/admin/documentos (con filtros)
-- PATCH /api/admin/documentos/:id/verificar
-- DELETE /api/admin/documentos/:id
+- [ ] Middleware CORS estricto por `FRONTEND_URL` con rechazo explícito.
+- [ ] Cabecera `X-Error-Reason: cors-rejected` en rechazos CORS.
+- [ ] Logging de origen/IP en rechazos CORS.
+- [ ] Política unificada de errores backend `{ error: { code, message } }`.
+- [ ] Frontend: `try/catch` en todos los fetch con feedback visual obligatorio.
+- [ ] Componente global de notificación (`Toast`/`Banner`).
 
 ---
 
-## 🔄 MEJORAS ADICIONALES
+## Fase 4 — Validación de calidad (obligatoria antes de merge)
 
-### 8. Notificaciones Email
-**Estado:** Implementado pero con errores SMTP  
-**Prioridad:** Baja (funcional sin emails)  
-**Descripción:**
-- Configurar correctamente SMTP (Brevo u otro servicio)
-- Notificaciones implementadas en:
-  - Registro de joven
-  - Registro de pago
-- Notificaciones pendientes:
-  - Documento subido
-  - Documento verificado
-  - Evento próximo a iniciar
+- [ ] Mantener en verde:
+  - [x] `npm run smoke:api`
+  - [x] `npm run smoke:youth`
+  - [x] `npm run smoke:roles`
+- [ ] Añadir smoke para nav/errores/CORS (`smoke:nav-errors`).
+- [ ] Ejecutar suites manuales 10-13 de `MD/V2/TESTING.md`.
+- [ ] Actualizar `CHANGELOG.md` por cada bloque de entrega.
 
 ---
 
-### 9. Reportes y Estadísticas
-**Estado:** No implementado  
-**Prioridad:** Baja  
-**Descripción:**
-- Dashboard con estadísticas generales
-- Exportar listas de participantes (Excel/PDF)
-- Reportes de pagos
-- Reportes de documentación
-- Gráficos de inscripciones por evento
+## Matriz de acceso por rol (estado objetivo Iteración 2)
+
+- **Anónimo**
+  - [x] `/`
+  - [x] `/eventos` (solo lectura pública)
+  - [x] `/contacto`
+  - [x] `/login`
+- **Monitor**
+  - [x] `/`
+  - [x] `/eventos` (solo sus eventos asignados)
+  - [x] `/contacto`
+  - [x] `/panel-monitor`
+  - [x] `/usuarios` (solo sus jóvenes)
+  - [ ] `/monitor` (no debe ser su panel; pendiente separación final)
+- **Admin (organizador/administrador)**
+  - [x] `/`
+  - [x] `/eventos` (CRUD + filtros)
+  - [x] `/contacto`
+  - [x] `/admin`
+  - [x] `/panel-monitor`
+  - [x] `/usuarios`
+  - [x] `/configuracion`
+  - [ ] `/monitor` (pendiente cierre definitivo como gestión de monitores)
 
 ---
 
-### 10. Gestión de Usuarios (Admin)
-**Estado:** Vista básica implementada, falta CRUD  
-**Prioridad:** Media  
-**Descripción:**
-- Crear nuevos monitores/organizadores
-- Editar usuarios existentes
-- Desactivar/activar usuarios
-- Asignar monitores a eventos
-- Ver actividad de usuarios
+## Decisión de implementación
 
-**Endpoints necesarios:**
-- POST /api/admin/usuarios (existe pero falta frontend)
-- PUT /api/admin/usuarios/:id
-- PATCH /api/admin/usuarios/:id/toggle-active
-
-
-### 11. Navegación
-**Estado:** Panel Navbar
-**Prioridad:** Alta 
-**Descripción:**
-- Inicio
-- Panel de monitor (oculto para usuarios no monitores, administrador si puede verlo y tiene acceso a las funcionalidades)
-- Panel de admin (solo los administradores pueden verlo y acceder)
-- Gestor de Usuarios (solo visible para administradores):
-    - Listado de usuarios
-    - Crear usuario
-    - Editar usuario
-    - Desactivar/activar usuario
-    - Si el usuario es monitor, asignar eventos a ese monitor
-    - Si el usuario que accede es monitor, solo puede ver los eventos a los que está asignado y gestionar los jóvenes de esos eventos. No puede ver ni gestionar otros eventos ni otros jóvenes.
-
-**Endpoints necesarios:**
-- POST /api/admin/usuarios (existe pero falta frontend)
-- PUT /api/admin/usuarios/:id
-- PATCH /api/admin/usuarios/:id/toggle-active
+Para minimizar riesgo, implementar por PRs cortos:
+1. Backend base (configuración + contacto + ficheros + dashboards).
+2. Navegación y páginas nuevas.
+3. CORS/errores y validaciones de seguridad.
+4. Testeo y endurecimiento final.
 
 ---
 
-## ✅ COMPLETADO
+## Referencias
 
-- ✅ Sistema de autenticación (JWT + refresh tokens)
-- ✅ Panel de administrador (vista base)
-- ✅ Panel de monitor (vista base)
-- ✅ Lista de eventos (lectura)
-- ✅ Lista de usuarios (lectura)
-- ✅ Lista de jóvenes (lectura)
-- ✅ Registro de pagos (monitor)
-- ✅ Enlaces de registro (generación y compartir)
-- ✅ Registro público de jóvenes (vía token)
-- ✅ Base de datos con schema personalizado
-- ✅ Seed de datos de prueba
-- ✅ Dropdown de jóvenes en monitor (arreglado)
-
----
-
-## 📝 NOTAS TÉCNICAS
-
-### Credenciales de Prueba:
-```
-Admin:
-  Email: admin@example.com
-  Password: password123
-
-Monitor 1:
-  Email: monitor1@example.com
-  Password: password123
-
-Monitor 2:
-  Email: monitor2@example.com
-  Password: password123
-```
-
-### Estructura de Base de Datos:
-- **eventos**: Información de eventos
-- **usuarios**: Monitores y organizadores
-- **monitores**: Relación usuario-evento con tokens
-- **jovenes**: Participantes registrados
-- **documentos**: Archivos subidos
-- **pagos**: Registro de pagos por plazo
-- **refresh_tokens**: Tokens de sesión
-
-### Puertos:
-- Backend: http://localhost:3001
-- Frontend: http://localhost:3000
-- Database: 192.168.1.10:5432 (PostgreSQL)
-
----
-
-**Fecha última actualización:** 19 de febrero de 2026
+- `MD/V2/INSTRUCTIONS.md`
+- `MD/V2/AGENT.md`
+- `MD/V2/AGENT_SECURITY.md`
+- `MD/V2/SKILL.md`
+- `MD/V2/TESTING.md`

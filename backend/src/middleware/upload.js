@@ -35,6 +35,24 @@ const uploadJovenDocumento = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
+const monitorStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const monitorFolder = `monitor-${req.user?.simulatedUserId || req.user?.userId || 'unknown'}`;
+    const folder = path.join(uploadsBase, monitorFolder);
+    fs.mkdirSync(folder, { recursive: true });
+    cb(null, folder);
+  },
+  filename: (req, file, cb) => {
+    cb(null, randomUUID());
+  },
+});
+
+const uploadMonitorFichero = multer({
+  storage: monitorStorage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
 const validateRealFileType = async (req, res, next) => {
   try {
     if (!req.file?.path) {
@@ -89,5 +107,6 @@ const validateRealFileType = async (req, res, next) => {
 module.exports = {
   uploadsBase,
   uploadJovenDocumento,
+  uploadMonitorFichero,
   validateRealFileType,
 };

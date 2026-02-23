@@ -29,7 +29,21 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const contactLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: {
+    error: {
+      code: 'TOO_MANY_CONTACT_REQUESTS',
+      message: 'Too many contact requests, please try again later',
+    },
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   generalLimiter,
   loginLimiter,
+  contactLimiter,
 };

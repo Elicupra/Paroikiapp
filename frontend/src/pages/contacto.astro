@@ -1,0 +1,75 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
+---
+
+<Layout title="Contacto">
+  <div style="max-width: 680px; margin: 2rem auto; padding: 0 1rem;">
+    <h2 style="margin-bottom: 1rem;">Contacto</h2>
+    <p style="color:#6b7280; margin-bottom:1rem;">Envíanos tu consulta y te responderemos lo antes posible.</p>
+
+    <form id="contactForm" style="display:grid; gap:0.85rem; background:white; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1rem;">
+      <div>
+        <label for="nombre" style="display:block; margin-bottom:0.25rem;">Nombre</label>
+        <input id="nombre" required style="width:100%;" />
+      </div>
+      <div>
+        <label for="email" style="display:block; margin-bottom:0.25rem;">Email</label>
+        <input id="email" type="email" required style="width:100%;" />
+      </div>
+      <div>
+        <label for="asunto" style="display:block; margin-bottom:0.25rem;">Asunto</label>
+        <input id="asunto" required style="width:100%;" />
+      </div>
+      <div>
+        <label for="mensaje" style="display:block; margin-bottom:0.25rem;">Mensaje</label>
+        <textarea id="mensaje" rows="5" required style="width:100%;"></textarea>
+      </div>
+      <button type="submit">Enviar</button>
+    </form>
+
+    <div id="message" style="margin-top:1rem;"></div>
+  </div>
+
+  <script define:vars={{ API_URL }}>
+    // @ts-nocheck
+    const form = document.getElementById('contactForm');
+    const messageEl = document.getElementById('message');
+
+    function setMessage(text, type = 'success') {
+      messageEl.className = type;
+      messageEl.textContent = text;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      setMessage('Enviando...', 'success');
+
+      const payload = {
+        nombre: document.getElementById('nombre').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        asunto: document.getElementById('asunto').value.trim(),
+        mensaje: document.getElementById('mensaje').value.trim(),
+      };
+
+      try {
+        const response = await fetch(`${API_URL}/api/public/contacto`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error?.message || 'No se pudo enviar el mensaje');
+        }
+
+        setMessage('Mensaje enviado correctamente.', 'success');
+        form.reset();
+      } catch (error) {
+        setMessage(`Error: ${error.message}`, 'error');
+      }
+    });
+  </script>
+</Layout>

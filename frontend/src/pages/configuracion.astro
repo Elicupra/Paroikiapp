@@ -1,0 +1,136 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
+---
+
+<Layout title="Configuración">
+  <div style="max-width: 900px; margin: 2rem auto; padding: 0 1rem;">
+    <h2 style="margin-bottom: 1rem;">Configuración</h2>
+    <p style="color:#6b7280; margin-bottom:1rem;">Panel exclusivo para administradores.</p>
+
+    <form id="configForm" style="display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:1rem; background:white; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1rem;">
+      <div>
+        <label for="app_nombre" style="display:block; margin-bottom:0.25rem;">Nombre app</label>
+        <input id="app_nombre" style="width:100%;" />
+      </div>
+      <div>
+        <label for="parroquia_nombre" style="display:block; margin-bottom:0.25rem;">Parroquia</label>
+        <input id="parroquia_nombre" style="width:100%;" />
+      </div>
+      <div style="grid-column: 1 / -1;">
+        <label for="parroquia_texto" style="display:block; margin-bottom:0.25rem;">Texto parroquia</label>
+        <textarea id="parroquia_texto" rows="4" style="width:100%;"></textarea>
+      </div>
+      <div>
+        <label for="color_primario" style="display:block; margin-bottom:0.25rem;">Color primario</label>
+        <input id="color_primario" placeholder="#2563eb" style="width:100%;" />
+      </div>
+      <div>
+        <label for="color_secundario" style="display:block; margin-bottom:0.25rem;">Color secundario</label>
+        <input id="color_secundario" placeholder="#1e40af" style="width:100%;" />
+      </div>
+      <div>
+        <label for="color_acento" style="display:block; margin-bottom:0.25rem;">Color acento</label>
+        <input id="color_acento" placeholder="#f59e0b" style="width:100%;" />
+      </div>
+      <div>
+        <label for="contacto_email" style="display:block; margin-bottom:0.25rem;">Email contacto</label>
+        <input id="contacto_email" type="email" style="width:100%;" />
+      </div>
+      <div>
+        <label for="contacto_telefono" style="display:block; margin-bottom:0.25rem;">Teléfono</label>
+        <input id="contacto_telefono" style="width:100%;" />
+      </div>
+      <div>
+        <label for="contacto_direccion" style="display:block; margin-bottom:0.25rem;">Dirección</label>
+        <input id="contacto_direccion" style="width:100%;" />
+      </div>
+      <div style="grid-column: 1 / -1;">
+        <button type="submit">Guardar configuración</button>
+      </div>
+    </form>
+
+    <div id="message" style="margin-top:1rem;"></div>
+  </div>
+
+  <script define:vars={{ API_URL }}>
+    // @ts-nocheck
+    const token = localStorage.getItem('accessToken');
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    const messageEl = document.getElementById('message');
+
+    const isAdmin = !!token && (user?.rol === 'organizador' || user?.rol === 'administrador');
+    if (!isAdmin) {
+      window.location.href = '/login';
+    }
+
+    function setMessage(text, type = 'success') {
+      messageEl.className = type;
+      messageEl.textContent = text;
+    }
+
+    async function loadConfig() {
+      const response = await fetch(`${API_URL}/api/admin/configuracion`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error?.message || 'Error cargando configuración');
+
+      const map = new Map((data.data || []).map((item) => [item.clave, item.valor]));
+      [
+        'app_nombre',
+        'parroquia_nombre',
+        'parroquia_texto',
+        'color_primario',
+        'color_secundario',
+        'color_acento',
+        'contacto_email',
+        'contacto_telefono',
+        'contacto_direccion',
+      ].forEach((key) => {
+        const input = document.getElementById(key);
+        if (input) input.value = map.get(key) || '';
+      });
+    }
+
+    document.getElementById('configForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      setMessage('Guardando...', 'success');
+
+      const payload = [
+        'app_nombre',
+        'parroquia_nombre',
+        'parroquia_texto',
+        'color_primario',
+        'color_secundario',
+        'color_acento',
+        'contacto_email',
+        'contacto_telefono',
+        'contacto_direccion',
+      ].map((key) => ({
+        clave: key,
+        valor: document.getElementById(key).value.trim(),
+      }));
+
+      try {
+        const response = await fetch(`${API_URL}/api/admin/configuracion`, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || 'Error guardando configuración');
+        setMessage('Configuración actualizada correctamente', 'success');
+      } catch (error) {
+        setMessage(`Error: ${error.message}`, 'error');
+      }
+    });
+
+    loadConfig().catch((error) => setMessage(`Error: ${error.message}`, 'error'));
+  </script>
+</Layout>

@@ -1,141 +1,87 @@
-# Paroikiapp - Registro de Eventos Juveniles
+# Paroikiapp
 
-Sistema completo de registro y gestión de eventos juveniles (campamentos, peregrinaciones, viajes) con autenticación segura, gestión de participantes y sistema de pagos.
+Sistema de registro y gestión de eventos juveniles (campamentos, peregrinaciones, viajes) con backend Express + PostgreSQL y frontend Astro.
 
-## Características
+## Reiteración del repositorio (base V2)
 
-- 🔐 Autenticación segura con JWT y refresh tokens en cookies httpOnly
-- 📝 Registro público de participantes con enlaces únicos por monitor
-- 👤 Panel de gestión para monitores
-- 🏢 Panel de administración para organizadores
-- 📄 Subida y gestión de documentos
-- 💳 Sistema de pagos e instalments
-- 📧 Notificaciones por email
-- 🐳 Despliegue con Docker Compose
-- 🛡️ Cumple checklist OWASP de seguridad
+Este repositorio se alinea con la documentación de Iteración 2 en `MD/V2/`:
+- `MD/V2/INSTRUCTIONS.md`
+- `MD/V2/AGENT.md`
+- `MD/V2/AGENT_SECURITY.md`
+- `MD/V2/SKILL.md`
+- `MD/V2/TESTING.md`
+- `MD/V2/CHANGELOG.md`
 
-## Stack Tecnológico
+## Estado actual (implementado en código)
 
-- **Backend**: Node.js + Express + PostgreSQL
-- **Frontend**: Astro (SSR)
-- **Proxy**: Nginx
-- **Autenticación**: JWT + Bcrypt
-- **Almacenamiento**: PostgreSQL
-- **Email**: Nodemailer
+### Administrador (`organizador` / `administrador`)
+- Gestión de eventos: crear, listar, editar y desactivar.
+- Gestión de usuarios: crear monitor, editar usuario, activar/desactivar y eliminar.
+- Gestión de asignaciones monitor↔evento: crear, modificar, revocar enlace y eliminar.
+- Gestión de jóvenes: listar, crear, editar, eliminar y ver perfil completo (pagos + documentos).
+- Recaudación por evento y por monitor.
 
-## Estructura del Proyecto
+### Monitor
+- Visualiza sus eventos activos asignados.
+- Visualiza solo jóvenes vinculados a sus asignaciones.
+- Edita jóvenes asignados.
+- Valida documentos de sus jóvenes.
+- Registra/actualiza pagos.
+- Gestiona su perfil (nombre mostrado, email y contraseña).
 
-```
-paroikiapp/
-├── backend/
-│   ├── src/
-│   │   ├── server.js          # Entrada principal
-│   │   ├── routes/            # Rutas API
-│   │   ├── controllers/       # Controladores
-│   │   ├── middleware/        # Middleware de seguridad
-│   │   ├── models/            # BD y migraciones
-│   │   ├── services/          # Servicios (notificaciones)
-│   │   └── utils/             # Utilidades
-│   ├── package.json
-│   └── Dockerfile
-├── frontend/
-│   ├── src/
-│   │   ├── pages/             # Páginas Astro
-│   │   ├── layouts/           # Layouts
-│   │   └── components/        # Componentes
-│   ├── package.json
-│   └── Dockerfile
-├── nginx/
-│   └── nginx.conf             # Configuración proxy
-├── docker-compose.yml         # Orquestación
-└── AGENT*.md                  # Documentación
-```
+### Registro público y ficha
+- Registro por enlace de monitor.
+- Entrega de enlace personal de ficha (`/ficha/:token`) tras registro.
+- Edición de ficha y gestión de documentos desde el enlace personal.
 
-## Inicio Rápido
+## Gap con Iteración 2 (pendiente)
 
-### 1. Clonar el repositorio
-```bash
-git clone <repo-url>
-cd paroikiapp
-```
+Pendiente principal para completar lo definido en `MD/V2`:
+- Sección pública `Contacto` con endpoint `POST /api/public/contacto`.
+- Configuración dinámica (`/api/admin/configuracion`) + tabla `configuracion` usada por layout/tema.
+- Dashboard global admin (`/api/admin/dashboard`) y mini-dashboard por monitor.
+- Ficheros privados de monitor (`monitor_ficheros` + endpoints monitor/admin).
+- Navbar y estructura de rutas final Iteración 2 (`/panel-monitor`, `/configuracion`, etc.).
+- Suites manuales 10-13 de `MD/V2/TESTING.md` (CORS/errores/navegación/config/contacto).
 
-### 2. Configurar variables de entorno
+## Stack
+- Backend: Node.js + Express + PostgreSQL
+- Frontend: Astro (SSR)
+- Proxy: Nginx
+- Auth: JWT + refresh tokens
 
-backend/.env
+## Inicio rápido (Docker)
+
+### 1) Configurar entorno
+Crear `backend/.env`:
+
 ```bash
 DATABASE_URL=postgresql://camposter:camposter123@postgres:5432/campregister
-JWT_SECRET=<generar-64-caracteres-aleatorios>
+DB_SCHEMA=paroikiapp
+JWT_SECRET=<clave-segura-larga>
 JWT_EXPIRES_IN=15m
 REFRESH_TOKEN_EXPIRES_IN=7d
-SMTP_HOST=smtp.brevo.com
-SMTP_PORT=587
-SMTP_USER=tu_email@example.com
-SMTP_PASS=tu_contraseña
-NOTIFY_FROM="Paroikiapp <no-reply@example.com>"
-NODE_ENV=production
 FRONTEND_URL=http://localhost
+NODE_ENV=production
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=user@example.com
+SMTP_PASS=secret
+NOTIFY_FROM="Paroikiapp <no-reply@example.com>"
 ```
 
-### 3. Iniciar con Docker Compose
+### 2) Levantar servicios
 ```bash
 docker-compose up --build
 ```
 
-La aplicación estará disponible en:
-- Frontend: http://localhost
-- Backend API: http://localhost/api
-- PostgreSQL: localhost:5432
-
-### 4. Crear base de datos inicial
+### 3) Migrar y seed
 ```bash
 docker-compose exec backend npm run migrate
+docker-compose exec backend npm run seed
 ```
 
-## Endpoints API
-
-### Autenticación
-- `POST /api/auth/login` - Iniciar sesión
-- `POST /api/auth/refresh` - Refrescar token
-- `POST /api/auth/logout` - Cerrar sesión
-- `PATCH /api/auth/me/password` - Cambiar contraseña
-- `PATCH /api/auth/me/email` - Cambiar email
-
-### Registro Público
-- `GET /register/:token` - Información del evento
-- `POST /register/:token/joven` - Registrar participante
-- `POST /register/:token/joven/:id/documento` - Subir documento
-
-### Monitor
-- `GET /api/monitor/jovenes` - Listar participantes
-- `GET /api/monitor/jovenes/:id` - Detalle de participante
-- `POST /api/monitor/pagos` - Registrar pago
-- `PATCH /api/monitor/pagos/:id` - Actualizar pago
-
-### Admin
-- `GET /api/admin/eventos` - Listar eventos
-- `POST /api/admin/eventos` - Crear evento
-- `GET /api/admin/eventos/:id/jovenes` - Participantes por evento
-- `GET /api/admin/usuarios` - Listar usuarios
-- `POST /api/admin/usuarios` - Crear usuario
-
-## Seguridad
-
-La aplicación implementa:
-
-✅ Hashing de contraseñas con bcrypt (min 12 rounds)  
-✅ JWT con expiración corta (15 min)  
-✅ Refresh tokens en cookies httpOnly  
-✅ Rate limiting en endpoints públicos  
-✅ Validación y sanitización de inputs  
-✅ Prepared statements en todas las queries  
-✅ Headers de seguridad HTTP (helmet)  
-✅ CORS configurado  
-✅ Validación MIME type de archivos  
-✅ Almacenamiento seguro de archivos  
-
-Ver `AGENT_SECURITY.md` para checklist completo.
-
-## Desarrollo Local
+## Desarrollo local
 
 ### Backend
 ```bash
@@ -151,60 +97,77 @@ npm install
 npm run dev
 ```
 
-## Migraciones de BD
-
-```bash
-npm run migrate       # Ejecutar migraciones
-npm run seed          # Datos de prueba (opcional)
-```
-
 ## Testing
 
-```bash
-npm test --prefix backend
-```
-
-## Logs
+Ejecutar desde raíz:
 
 ```bash
-docker-compose logs -f backend
-docker-compose logs -f postgres
+npm run smoke:api
+npm run smoke:youth
+npm run smoke:roles
 ```
 
-## Variables de Entorno Principales
+Cobertura actual:
+- `smoke:api`: regresión admin/eventos/asignaciones.
+- `smoke:youth`: flujo joven/ficha/documentos.
+- `smoke:roles`: verificación de requisitos por rol (admin y monitor).
 
-| Variable | Descripción | Requerido |
-|----------|-----------|-----------|
-| `DATABASE_URL` | Conexión PostgreSQL | ✅ |
-| `JWT_SECRET` | Clave secreta (min 64 chars) | ✅ |
-| `SMTP_HOST` | Servidor SMTP | ⚠️ |
-| `SMTP_USER` | Usuario SMTP | ⚠️ |
-| `SMTP_PASS` | Contraseña SMTP | ⚠️ |
-| `NODE_ENV` | Entorno (`development`/`production`) | ✅ |
+Para pruebas de Iteración 2 completas usar `MD/V2/TESTING.md` (suites 1-13).
 
-## Troubleshooting
+## Seguridad
 
-### Error de conexión a BD
-```bash
-docker-compose exec postgres psql -U camposter -d campregister
-```
+Aplicado en base actual:
+- Hash de contraseñas con bcrypt.
+- Control de acceso por rol en backend.
+- Prepared statements.
+- Validación de tipo real de archivos.
+- Rate limiting en endpoints sensibles.
+- Helmet + CORS.
 
-### Limpiar volúmenes y datos
-```bash
-docker-compose down -v
-```
+Checklist ampliado de Iteración 2: `MD/V2/AGENT_SECURITY.md`.
 
-### Rebuildar imágenes
-```bash
-docker-compose build --no-cache
-```
+## API principal (resumen actual)
 
-## Licencia
+### Auth
+- `POST /api/auth/login`
+- `POST /api/auth/refresh`
+- `POST /api/auth/logout`
+- `PATCH /api/auth/me/profile`
+- `PATCH /api/auth/me/email`
+- `PATCH /api/auth/me/password`
 
-Privado - Paroikiapp 2026
+### Admin
+- Eventos: `GET/POST/PUT/DELETE /api/admin/eventos` + recaudación/descuento.
+- Usuarios: `GET/POST/PUT/PATCH/DELETE /api/admin/usuarios`.
+- Asignaciones monitor-evento: alta/baja/edición/revocación.
+- Jóvenes: `GET/POST/PATCH/DELETE /api/admin/jovenes` + perfil.
 
-## Documentación Adicional
+### Monitor
+- `GET /api/monitor/eventos`
+- `GET /api/monitor/eventos/:eventoId/recaudacion`
+- `GET /api/monitor/resumen?evento_id=:id`
+- `GET /api/monitor/registration-link`
+- `GET /api/monitor/jovenes`
+- `GET /api/monitor/jovenes/:jovenId`
+- `PATCH /api/monitor/jovenes/:jovenId`
+- `GET /api/monitor/jovenes/:jovenId/documentos`
+- `PATCH /api/monitor/documentos/:docId/validar`
+- `POST /api/monitor/pagos`
+- `PATCH /api/monitor/pagos/:pagoId`
 
-- [AGENT.md](./AGENT.md) - Guía de desarrollo
-- [AGENT_SECURITY.md](./AGENT_SECURITY.md) - Checklist de seguridad
-- [SKILL.md](./SKILL.md) - Esquema de BD y contratos API
+### Registro/Ficha
+- `GET /register/:token`
+- `POST /register/:token/joven`
+- `POST /register/:token/joven/:jovenId/documento`
+- `GET /register/acceso/:accessToken`
+- `POST /register/acceso/:accessToken/documento`
+- `GET /ficha/:jovenToken`
+- `PATCH /ficha/:jovenToken`
+- `POST /ficha/:jovenToken/documento`
+- `DELETE /ficha/:jovenToken/documento/:docId`
+
+## Documentación relacionada
+- `README.md` (este documento)
+- `TODO.md` (plan de implementación por fases)
+- `CHANGELOG.md` (cambios aplicados)
+- `MD/V2/*` (objetivo Iteración 2 y criterios completos)

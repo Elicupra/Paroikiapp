@@ -16,6 +16,13 @@ router.delete('/tipos-evento/:tipoId', adminController.deleteTipoEvento);
 // GET /api/admin/registration-links
 router.get('/registration-links', adminController.getRegistrationLinks);
 
+// GET/PUT /api/admin/configuracion
+router.get('/configuracion', adminController.getConfiguracion);
+router.put('/configuracion', adminController.updateConfiguracion);
+
+// GET /api/admin/dashboard
+router.get('/dashboard', adminController.getAdminDashboard);
+
 // GET /api/admin/eventos
 router.get('/eventos', adminController.getEventos);
 
@@ -67,6 +74,12 @@ router.post('/monitores/:monitorId/eventos', adminController.assignMonitorEvento
 router.patch('/monitores/:monitorId/eventos/:eventoId', adminController.updateMonitorEventoAssignment);
 router.delete('/monitores/:monitorId/eventos/:eventoId', adminController.removeMonitorEventoByEvento);
 router.post('/monitores/:monitorId/eventos/:eventoId/revocar-enlace', adminController.revokeMonitorTokenByEvento);
+
+// GET /api/admin/monitores/:monitorId/dashboard
+router.get('/monitores/:monitorId/dashboard', adminController.getMonitorDashboard);
+
+// GET /api/admin/monitores/:monitorId/ficheros
+router.get('/monitores/:monitorId/ficheros', adminController.getMonitorFicherosAdmin);
 
 // Límite de jóvenes por monitor
 router.patch('/monitores/:monitorId/max-jovenes', adminController.updateMonitorMaxJovenes);

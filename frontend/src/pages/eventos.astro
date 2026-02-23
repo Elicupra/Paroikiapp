@@ -5,127 +5,103 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 ---
 
 <Layout title="Gestión de Eventos">
-  <div style="max-width: 1400px; margin: 2rem auto; padding: 0 1rem;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-      <h2 style="margin: 0;">Gestión de Eventos</h2>
-      <button id="btnNuevoEvento" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">
-        + Nuevo Evento
-      </button>
+  <div style="max-width: 1300px; margin: 2rem auto; padding: 0 1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
+      <h2 style="margin:0;">Gestión de Eventos</h2>
+      <button id="btnNuevoEvento" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; padding:0.75rem 1.25rem; border:none; border-radius:0.5rem; cursor:pointer; font-weight:600;">+ Nuevo Evento</button>
     </div>
 
-    <!-- Tabs -->
-    <div style="display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 2px solid #e5e7eb;">
-      <button id="tabActivos" class="tab active" style="padding: 0.75rem 1.5rem; background: none; border: none; cursor: pointer; font-weight: 600; border-bottom: 3px solid #667eea; color: #667eea;">
-        Eventos Activos
-      </button>
-      <button id="tabPasados" class="tab" style="padding: 0.75rem 1.5rem; background: none; border: none; cursor: pointer; font-weight: 600; border-bottom: 3px solid transparent; color: #6b7280;">
-        Eventos Pasados
-      </button>
+    <div id="viewInfo" style="display:none; margin-bottom:1rem; padding:0.75rem 1rem; border-radius:0.5rem; background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af;"></div>
+
+    <div style="display:flex; gap:0.75rem; margin-bottom:1rem; border-bottom:2px solid #e5e7eb;">
+      <button id="tabProximos" class="tab active" style="padding:0.75rem 1rem; background:none; border:none; cursor:pointer; font-weight:600; border-bottom:3px solid #667eea; color:#667eea;">Eventos Próximos</button>
+      <button id="tabPasados" class="tab" style="padding:0.75rem 1rem; background:none; border:none; cursor:pointer; font-weight:600; border-bottom:3px solid transparent; color:#6b7280;">Eventos Pasados</button>
     </div>
 
-    <!-- Contenido de tabs -->
-    <div id="tabContent">
-      <div id="loading" style="text-align: center; padding: 3rem;">
-        <p style="color: #666;">Cargando eventos...</p>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:0.75rem; margin-bottom:1rem;">
+      <div>
+        <label for="textFilter" style="display:block; margin-bottom:0.35rem; font-weight:600;">Buscar</label>
+        <input id="textFilter" type="text" placeholder="Nombre, tipo, descripción o localización" style="width:100%; padding:0.6rem; border:1px solid #d1d5db; border-radius:0.5rem;" />
       </div>
-      <div id="eventosContainer" style="display: none;">
-        <!-- Grid de eventos se carga aquí -->
+      <div>
+        <label for="sortFilter" style="display:block; margin-bottom:0.35rem; font-weight:600;">Orden</label>
+        <select id="sortFilter" style="width:100%; padding:0.6rem; border:1px solid #d1d5db; border-radius:0.5rem; background:white;">
+          <option value="fecha_asc">Fecha (más próxima)</option>
+          <option value="fecha_desc">Fecha (más lejana)</option>
+          <option value="nombre_asc">Nombre (A-Z)</option>
+        </select>
+      </div>
+      <div style="display:flex; align-items:flex-end;">
+        <button id="btnRefrescar" style="width:100%; padding:0.6rem; border:1px solid #d1d5db; border-radius:0.5rem; background:white; cursor:pointer;">Refrescar</button>
       </div>
     </div>
 
-    <div id="message" style="margin-top: 1rem; padding: 1rem; border-radius: 0.5rem; display: none;"></div>
+    <div id="loading" style="display:none; text-align:center; padding:2.5rem; color:#6b7280;">Cargando eventos...</div>
+    <div id="eventosContainer" style="display:none;"></div>
+    <div id="message" style="display:none; margin-top:1rem; padding:0.85rem; border-radius:0.5rem;"></div>
   </div>
 
-  <!-- Modal crear/editar evento -->
-  <div id="modalEvento" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
-    <div style="min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 2rem;">
-      <div style="background: white; border-radius: 1rem; max-width: 700px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
-        <div style="padding: 2rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
-          <h3 id="modalTitle" style="margin: 0; font-size: 1.5rem;">Nuevo Evento</h3>
-          <button id="btnCerrarModal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; padding: 0; width: 2rem; height: 2rem;">&times;</button>
+  <div id="modalEvento" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; overflow-y:auto;">
+    <div style="min-height:100%; display:flex; align-items:center; justify-content:center; padding:2rem;">
+      <div style="background:white; border-radius:1rem; max-width:700px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 20px 25px -5px rgba(0,0,0,0.15);">
+        <div style="padding:1.5rem; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">
+          <h3 id="modalTitle" style="margin:0;">Nuevo Evento</h3>
+          <button id="btnCerrarModal" style="background:none; border:none; font-size:1.4rem; cursor:pointer;">&times;</button>
         </div>
-        
-        <form id="formEvento" style="padding: 2rem;">
+
+        <form id="formEvento" style="padding:1.5rem; display:grid; gap:1rem;">
           <input type="hidden" id="evento_id" />
-          <div id="modalMessageEvento" style="display: none; margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 0.5rem; font-weight: 500;"></div>
-          
-          <div style="display: grid; gap: 1.5rem;">
-            <!-- Nombre -->
+          <div>
+            <label for="nombre" style="display:block; margin-bottom:0.35rem; font-weight:600;">Nombre *</label>
+            <input id="nombre" required style="width:100%;" />
+          </div>
+          <div>
+            <label for="tipo" style="display:block; margin-bottom:0.35rem; font-weight:600;">Tipo *</label>
+            <select id="tipo" required style="width:100%; background:white;">
+              <option value="campamento">Campamento</option>
+              <option value="peregrinacion">Peregrinación</option>
+              <option value="viaje">Viaje</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div>
+            <label for="descripcion" style="display:block; margin-bottom:0.35rem; font-weight:600;">Descripción</label>
+            <textarea id="descripcion" rows="3" style="width:100%;"></textarea>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
             <div>
-              <label for="nombre" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Nombre del Evento *</label>
-              <input type="text" id="nombre" required style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem;" />
+              <label for="precio_base" style="display:block; margin-bottom:0.35rem; font-weight:600;">Precio (€)</label>
+              <input id="precio_base" type="number" step="0.01" min="0" style="width:100%;" />
             </div>
-
-            <!-- Tipo -->
             <div>
-              <label for="tipo" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Tipo *</label>
-              <select id="tipo" required style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; background: white;">
-                <option value="campamento">Campamento</option>
-                <option value="peregrinacion">Peregrinación</option>
-                <option value="viaje">Viaje</option>
-                <option value="otro">Otro</option>
-              </select>
-            </div>
-
-            <!-- Descripción -->
-            <div>
-              <label for="descripcion" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Descripción</label>
-              <textarea id="descripcion" rows="3" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; resize: vertical;"></textarea>
-            </div>
-
-            <!-- Precio y Localización en fila -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-              <div>
-                <label for="precio_base" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Precio (€)</label>
-                <input type="number" id="precio_base" step="0.01" min="0" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem;" />
-              </div>
-              <div>
-                <label for="localizacion" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Localización</label>
-                <input type="text" id="localizacion" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem;" />
-              </div>
-            </div>
-
-            <!-- Fechas -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-              <div>
-                <label for="fecha_inicio" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Fecha Inicio</label>
-                <input type="date" id="fecha_inicio" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem;" />
-              </div>
-              <div>
-                <label for="fecha_fin" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Fecha Fin</label>
-                <input type="date" id="fecha_fin" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem;" />
-              </div>
-            </div>
-
-            <!-- Fotos (URLs) -->
-            <div>
-              <label for="fotos" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Fotos (URLs, una por línea)</label>
-              <textarea id="fotos" rows="3" placeholder="https://ejemplo.com/foto1.jpg&#10;https://ejemplo.com/foto2.jpg" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; resize: vertical;"></textarea>
-              <small style="color: #6b7280;">Ingresa las URLs de las fotos, una por línea</small>
-            </div>
-
-            <!-- Otra información -->
-            <div>
-              <label for="otra_informacion" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Otra Información</label>
-              <textarea id="otra_informacion" rows="4" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; resize: vertical;"></textarea>
-            </div>
-
-            <!-- Activo (solo en edición) -->
-            <div id="activoContainer" style="display: none;">
-              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                <input type="checkbox" id="activo" style="width: 1.25rem; height: 1.25rem; cursor: pointer;" />
-                <span style="font-weight: 600;">Evento Activo</span>
-              </label>
+              <label for="localizacion" style="display:block; margin-bottom:0.35rem; font-weight:600;">Localización</label>
+              <input id="localizacion" style="width:100%;" />
             </div>
           </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+            <div>
+              <label for="fecha_inicio" style="display:block; margin-bottom:0.35rem; font-weight:600;">Fecha inicio</label>
+              <input id="fecha_inicio" type="date" style="width:100%;" />
+            </div>
+            <div>
+              <label for="fecha_fin" style="display:block; margin-bottom:0.35rem; font-weight:600;">Fecha fin</label>
+              <input id="fecha_fin" type="date" style="width:100%;" />
+            </div>
+          </div>
+          <div>
+            <label for="otra_informacion" style="display:block; margin-bottom:0.35rem; font-weight:600;">Otra información</label>
+            <textarea id="otra_informacion" rows="3" style="width:100%;"></textarea>
+          </div>
+          <div id="activoContainer" style="display:none;">
+            <label style="display:flex; gap:0.5rem; align-items:center; cursor:pointer;">
+              <input id="activo" type="checkbox" />
+              <span>Evento activo</span>
+            </label>
+          </div>
 
-          <div style="display: flex; gap: 1rem; margin-top: 2rem; justify-content: flex-end;">
-            <button type="button" id="btnCancelar" style="padding: 0.75rem 1.5rem; border: 1px solid #d1d5db; background: white; color: #374151; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">
-              Cancelar
-            </button>
-            <button type="submit" style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">
-              Guardar Evento
-            </button>
+          <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:0.5rem;">
+            <button type="button" id="btnCancelar" style="background:white; color:#374151; border:1px solid #d1d5db;">Cancelar</button>
+            <button type="submit">Guardar Evento</button>
           </div>
         </form>
       </div>
@@ -136,26 +112,33 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
     // @ts-nocheck
     const accessToken = localStorage.getItem('accessToken');
 
-    if (!accessToken) {
-      window.location.href = '/login';
+    function parseUser() {
+      try {
+        const raw = localStorage.getItem('user');
+        return raw ? JSON.parse(raw) : null;
+      } catch (_) {
+        return null;
+      }
     }
 
-    let currentTab = 'activos';
-    let eventos = [];
+    const currentUser = parseUser();
+    const isAdmin = currentUser?.rol === 'administrador' || currentUser?.rol === 'organizador';
+    const isMonitor = currentUser?.rol === 'monitor';
+    const isAnon = !accessToken || !currentUser;
+
+    if (!isAnon && !isAdmin && !isMonitor) {
+      window.location.href = '/';
+    }
+
+    let currentTab = 'proximos';
+    let allEventos = [];
     let editingEventoId = null;
-    let tiposEvento = [];
 
-    function getLegacyTipoFromNombre(nombre = '') {
-      const normalized = String(nombre)
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '');
-
-      if (normalized.includes('campamento')) return 'campamento';
-      if (normalized.includes('peregrin')) return 'peregrinacion';
-      if (normalized.includes('viaje')) return 'viaje';
-      return 'otro';
-    }
+    const loadingEl = document.getElementById('loading');
+    const containerEl = document.getElementById('eventosContainer');
+    const messageEl = document.getElementById('message');
+    const viewInfoEl = document.getElementById('viewInfo');
+    const modalEl = document.getElementById('modalEvento');
 
     function escapeHtml(value) {
       return String(value ?? '')
@@ -166,72 +149,134 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
         .replace(/'/g, '&#39;');
     }
 
-    // Elementos del DOM
-    const modal = document.getElementById('modalEvento');
-    const form = document.getElementById('formEvento');
-    const messageEl = document.getElementById('message');
-    const modalMessageEl = document.getElementById('modalMessageEvento');
-
-    function showModalMessage(text, type) {
-      modalMessageEl.textContent = text;
-      modalMessageEl.style.display = 'block';
-      modalMessageEl.style.backgroundColor = type === 'success' ? '#d1fae5' : '#fee2e2';
-      modalMessageEl.style.color = type === 'success' ? '#065f46' : '#991b1b';
-      modalMessageEl.style.border = `1px solid ${type === 'success' ? '#a7f3d0' : '#fecaca'}`;
+    function showMessage(text, type = 'error') {
+      messageEl.textContent = text;
+      messageEl.style.display = 'block';
+      messageEl.style.background = type === 'success' ? '#d1fae5' : '#fee2e2';
+      messageEl.style.color = type === 'success' ? '#065f46' : '#991b1b';
+      setTimeout(() => { messageEl.style.display = 'none'; }, 5000);
     }
 
-    function clearModalMessage() {
-      modalMessageEl.style.display = 'none';
-      modalMessageEl.textContent = '';
+    function dateOrMin(iso) {
+      if (!iso) return Number.MAX_SAFE_INTEGER;
+      const time = new Date(iso).getTime();
+      return Number.isNaN(time) ? Number.MAX_SAFE_INTEGER : time;
     }
 
-    async function loadTiposEvento() {
+    function isUpcoming(evento) {
+      if (!evento?.activo) return false;
+      const now = new Date();
+      const start = evento.fecha_inicio ? new Date(evento.fecha_inicio) : null;
+      const end = evento.fecha_fin ? new Date(evento.fecha_fin) : null;
+      if (end && !Number.isNaN(end.getTime())) return end >= now;
+      if (start && !Number.isNaN(start.getTime())) return start >= now;
+      return true;
+    }
+
+    function isPast(evento) {
+      if (!evento?.activo) return true;
+      const now = new Date();
+      const end = evento.fecha_fin ? new Date(evento.fecha_fin) : null;
+      return Boolean(end && !Number.isNaN(end.getTime()) && end < now);
+    }
+
+    function getVisibleEventos() {
+      const text = document.getElementById('textFilter').value.trim().toLowerCase();
+      const sort = document.getElementById('sortFilter').value;
+
+      let filtered = allEventos.filter((e) => currentTab === 'proximos' ? isUpcoming(e) : isPast(e));
+
+      if (text) {
+        filtered = filtered.filter((e) => {
+          const haystack = [e.nombre, e.tipo, e.tipo_evento_nombre, e.descripcion, e.localizacion]
+            .map((v) => String(v || '').toLowerCase())
+            .join(' ');
+          return haystack.includes(text);
+        });
+      }
+
+      filtered.sort((a, b) => {
+        if (sort === 'nombre_asc') return String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es');
+        const delta = dateOrMin(a.fecha_inicio) - dateOrMin(b.fecha_inicio);
+        return sort === 'fecha_desc' ? -delta : delta;
+      });
+
+      return filtered;
+    }
+
+    function renderEventos() {
+      const eventos = getVisibleEventos();
+      containerEl.style.display = 'grid';
+      containerEl.style.gridTemplateColumns = 'repeat(auto-fill, minmax(320px, 1fr))';
+      containerEl.style.gap = '1rem';
+
+      if (!eventos.length) {
+        containerEl.style.display = 'block';
+        containerEl.innerHTML = `<p style="text-align:center; padding:2.5rem; color:#6b7280;">${currentTab === 'proximos' ? 'No hay eventos próximos disponibles' : 'No hay eventos pasados disponibles'}</p>`;
+        return;
+      }
+
+      containerEl.innerHTML = eventos.map((evento) => {
+        const fechaInicio = evento.fecha_inicio ? new Date(evento.fecha_inicio).toLocaleDateString('es-ES') : 'N/A';
+        const fechaFin = evento.fecha_fin ? new Date(evento.fecha_fin).toLocaleDateString('es-ES') : 'N/A';
+        const precio = evento.precio_base ? `€${parseFloat(evento.precio_base).toFixed(2)}` : 'N/A';
+
+        return `
+          <article style="background:white; border:1px solid #e5e7eb; border-radius:0.75rem; overflow:hidden;">
+            <div style="padding:1rem; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:white;">
+              <h3 style="margin:0 0 0.35rem 0;">${escapeHtml(evento.nombre)}</h3>
+              <span style="font-size:0.9rem; opacity:0.95;">${escapeHtml(evento.tipo_evento_nombre || evento.tipo || '-')}</span>
+            </div>
+            <div style="padding:1rem; display:grid; gap:0.35rem; color:#374151;">
+              <p style="margin:0;"><strong>Inicio:</strong> ${fechaInicio}</p>
+              <p style="margin:0;"><strong>Fin:</strong> ${fechaFin}</p>
+              <p style="margin:0;"><strong>Precio:</strong> ${precio}</p>
+              ${evento.localizacion ? `<p style="margin:0;"><strong>Localización:</strong> ${escapeHtml(evento.localizacion)}</p>` : ''}
+              ${evento.descripcion ? `<p style="margin:0; color:#6b7280;">${escapeHtml(evento.descripcion)}</p>` : ''}
+
+              ${isAdmin ? `
+                <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+                  <button class="btn-edit" data-id="${evento.id}" style="flex:1; background:#3b82f6;">Modificar</button>
+                  <button class="btn-delete" data-id="${evento.id}" style="flex:1; background:#ef4444;">Borrar</button>
+                </div>
+              ` : '<div style="margin-top:0.5rem; color:#6b7280; font-size:0.9rem;">Solo lectura</div>'}
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    async function fetchJsonSafe(url, options = {}) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
       try {
-        const response = await fetch(`${API_URL}/api/admin/tipos-evento`, {
-          headers: { 'Authorization': 'Bearer ' + accessToken },
-        });
-
-        if (!response.ok) {
-          return;
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        const text = await response.text();
+        let data = null;
+        try {
+          data = text ? JSON.parse(text) : null;
+        } catch (_) {
+          data = null;
         }
-
-        const payload = await response.json();
-        tiposEvento = Array.isArray(payload.data) ? payload.data.filter(t => t.activo) : [];
-
-        const tipoSelect = document.getElementById('tipo');
-        if (!tipoSelect) {
-          return;
-        }
-
-        const previousValue = tipoSelect.value;
-        const options = tiposEvento.map((tipo) => {
-          const legacyTipo = getLegacyTipoFromNombre(tipo.nombre);
-          return `<option value="${legacyTipo}" data-tipo-id="${tipo.id}">${escapeHtml(tipo.nombre)}</option>`;
-        });
-
-        options.push('<option value="otro">Otro</option>');
-        tipoSelect.innerHTML = options.join('');
-
-        if (previousValue) {
-          tipoSelect.value = previousValue;
-        }
-      } catch (error) {
-        console.error('Error loading tipos evento:', error);
+        return { response, data };
+      } finally {
+        clearTimeout(timeoutId);
       }
     }
 
-    // Cargar eventos
     async function loadEventos() {
+      loadingEl.style.display = 'block';
+      containerEl.style.display = 'none';
+
       try {
-        document.getElementById('loading').style.display = 'block';
-        document.getElementById('eventosContainer').style.display = 'none';
+        const endpoint = isAnon
+          ? `${API_URL}/api/public/eventos`
+          : (isAdmin
+            ? `${API_URL}/api/admin/eventos?incluir_pasados=true`
+            : `${API_URL}/api/monitor/eventos`);
 
-        const url = `${API_URL}/api/admin/eventos${currentTab === 'pasados' ? '?incluir_pasados=true' : ''}`;
-        const response = await fetch(url, {
-          headers: { 'Authorization': 'Bearer ' + accessToken },
-        });
-
-        const data = await response.json();
+        const options = isAnon ? {} : { headers: { Authorization: `Bearer ${accessToken}` } };
+        const { response, data } = await fetchJsonSafe(endpoint, options);
 
         if (!response.ok) {
           if (response.status === 401) {
@@ -239,329 +284,220 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
             window.location.href = '/login';
             return;
           }
-          throw new Error(data.error?.message || 'Error al cargar eventos');
+          throw new Error(data?.error?.message || `HTTP ${response.status}`);
         }
 
-        // Filtrar según tab activo
-        eventos = currentTab === 'activos' 
-          ? data.data.filter(e => e.activo) 
-          : data.data.filter(e => !e.activo);
-
+        allEventos = Array.isArray(data?.data) ? data.data : [];
         renderEventos();
       } catch (error) {
-        console.error('Error loading eventos:', error);
-        showMessage('Error al cargar eventos: ' + error.message, 'error');
+        showMessage(`Error al cargar eventos: ${error.name === 'AbortError' ? 'timeout de conexión' : error.message}`, 'error');
+        containerEl.style.display = 'block';
+        containerEl.innerHTML = '<p style="text-align:center; padding:2.5rem; color:#991b1b;">No se pudieron recuperar eventos.</p>';
       } finally {
-        document.getElementById('loading').style.display = 'none';
+        loadingEl.style.display = 'none';
       }
     }
 
-    // Renderizar eventos
-    function renderEventos() {
-      const container = document.getElementById('eventosContainer');
-      container.style.display = 'grid';
-      container.style.gridTemplateColumns = 'repeat(auto-fill, minmax(350px, 1fr))';
-      container.style.gap = '1.5rem';
+    function updateTabUI() {
+      const tabProximos = document.getElementById('tabProximos');
+      const tabPasados = document.getElementById('tabPasados');
+      const activeIsProximos = currentTab === 'proximos';
 
-      if (eventos.length === 0) {
-        container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 3rem; color: #666;">No hay eventos en esta categoría</p>';
-        return;
-      }
-
-      container.innerHTML = eventos.map(evento => {
-        const fechaInicio = evento.fecha_inicio ? new Date(evento.fecha_inicio).toLocaleDateString('es-ES') : 'N/A';
-        const fechaFin = evento.fecha_fin ? new Date(evento.fecha_fin).toLocaleDateString('es-ES') : 'N/A';
-        const precio = evento.precio_base ? `€${parseFloat(evento.precio_base).toFixed(2)}` : 'N/A';
-        const nombre = escapeHtml(evento.nombre);
-        const tipo = escapeHtml(evento.tipo_evento_nombre || evento.tipo);
-        const descripcion = escapeHtml(evento.descripcion);
-        const localizacion = escapeHtml(evento.localizacion);
-        
-        return `
-          <div style="background: white; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.5rem; color: white;">
-              <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem;">${nombre}</h3>
-              <span style="display: inline-block; background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.875rem; text-transform: capitalize;">
-                ${tipo}
-              </span>
-            </div>
-            <div style="padding: 1.5rem;">
-              ${evento.descripcion ? `<p style="color: #6b7280; margin: 0 0 1rem 0; line-height: 1.5;">${descripcion}</p>` : ''}
-              
-              <div style="display: grid; gap: 0.5rem; font-size: 0.9rem;">
-                ${evento.localizacion ? `<p style="margin: 0; color: #374151;"><strong>📍 Localización:</strong> ${localizacion}</p>` : ''}
-                <p style="margin: 0; color: #374151;"><strong>💰 Precio:</strong> ${precio}</p>
-                <p style="margin: 0; color: #374151;"><strong>📊 Esperado:</strong> €${parseFloat(evento.total_esperado || 0).toFixed(2)}</p>
-                <p style="margin: 0; color: #374151;"><strong>✅ Pagado:</strong> €${parseFloat(evento.total_pagado || 0).toFixed(2)}</p>
-                <p style="margin: 0; color: #374151;"><strong>🎯 Grupos estimados:</strong> ${Math.max(5, Number(evento.total_grupos || 0))}</p>
-                <p style="margin: 0; color: #374151;"><strong>🏷️ Descuento global:</strong> €${parseFloat(evento.descuento_global || 0).toFixed(2)}</p>
-                <p style="margin: 0; color: #374151;"><strong>📅 Inicio:</strong> ${fechaInicio}</p>
-                <p style="margin: 0; color: #374151;"><strong>📅 Fin:</strong> ${fechaFin}</p>
-                ${evento.fotos && evento.fotos.length > 0 ? `<p style="margin: 0; color: #374151;"><strong>📷 Fotos:</strong> ${evento.fotos.length}</p>` : ''}
-              </div>
-
-              <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
-                <button class="btn-editar-evento" data-evento-id="${evento.id}" style="flex: 1; padding: 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;">
-                  Editar
-                </button>
-                <button class="btn-descuento-evento" data-evento-id="${evento.id}" data-descuento="${Number(evento.descuento_global || 0)}" style="flex: 1; padding: 0.5rem; background: #8b5cf6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;">
-                  Descuento
-                </button>
-                ${evento.activo ? `
-                  <button class="btn-desactivar-evento" data-evento-id="${evento.id}" style="flex: 1; padding: 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 500;">
-                    Desactivar
-                  </button>
-                ` : ''}
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
+      tabProximos.style.borderBottomColor = activeIsProximos ? '#667eea' : 'transparent';
+      tabProximos.style.color = activeIsProximos ? '#667eea' : '#6b7280';
+      tabPasados.style.borderBottomColor = !activeIsProximos ? '#667eea' : 'transparent';
+      tabPasados.style.color = !activeIsProximos ? '#667eea' : '#6b7280';
     }
 
-    // Abrir modal para nuevo evento
-    document.getElementById('btnNuevoEvento').onclick = () => {
-      editingEventoId = null;
-      form.reset();
-      clearModalMessage();
-      document.getElementById('evento_id').value = '';
-      document.getElementById('modalTitle').textContent = 'Nuevo Evento';
-      document.getElementById('activoContainer').style.display = 'none';
-      modal.style.display = 'block';
-    };
-
-    // Editar evento
-    window.editEvento = async (eventoId) => {
+    async function loadTiposEvento() {
+      if (!isAdmin) return;
       try {
-        const response = await fetch(`${API_URL}/api/admin/eventos/${eventoId}`, {
-          headers: { 'Authorization': 'Bearer ' + accessToken },
+        const { response, data } = await fetchJsonSafe(`${API_URL}/api/admin/tipos-evento`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
         });
+        if (!response.ok) return;
 
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error?.message);
-
-        const evento = result.data;
-        editingEventoId = eventoId;
-        clearModalMessage();
-
-        document.getElementById('evento_id').value = evento.id;
-        document.getElementById('nombre').value = evento.nombre || '';
+        const tipos = Array.isArray(data?.data) ? data.data.filter((t) => t.activo) : [];
         const tipoSelect = document.getElementById('tipo');
-        if (evento.tipo_evento_id) {
-          const optionById = Array.from(tipoSelect.options).find((opt) => opt.dataset?.tipoId === evento.tipo_evento_id);
-          tipoSelect.value = optionById ? optionById.value : (evento.tipo || 'campamento');
-        } else {
-          tipoSelect.value = evento.tipo || 'campamento';
-        }
-        document.getElementById('descripcion').value = evento.descripcion || '';
-        document.getElementById('precio_base').value = evento.precio_base || '';
-        document.getElementById('localizacion').value = evento.localizacion || '';
-        document.getElementById('fecha_inicio').value = evento.fecha_inicio || '';
-        document.getElementById('fecha_fin').value = evento.fecha_fin || '';
-        document.getElementById('fotos').value = evento.fotos ? evento.fotos.join('\n') : '';
-        document.getElementById('otra_informacion').value = evento.otra_informacion || '';
-        document.getElementById('activo').checked = evento.activo;
-        document.getElementById('activoContainer').style.display = 'block';
-        document.getElementById('modalTitle').textContent = 'Editar Evento';
+        const current = tipoSelect.value;
 
-        modal.style.display = 'block';
-      } catch (error) {
-        showMessage('Error al cargar evento: ' + error.message, 'error');
+        const options = tipos.map((tipo) => {
+          const nombre = String(tipo.nombre || '').toLowerCase();
+          let value = 'otro';
+          if (nombre.includes('campamento')) value = 'campamento';
+          else if (nombre.includes('peregrin')) value = 'peregrinacion';
+          else if (nombre.includes('viaje')) value = 'viaje';
+          return `<option value="${value}" data-tipo-id="${tipo.id}">${escapeHtml(tipo.nombre)}</option>`;
+        });
+        options.push('<option value="otro">Otro</option>');
+        tipoSelect.innerHTML = options.join('');
+        if (current) tipoSelect.value = current;
+      } catch (_) {
       }
-    };
+    }
 
-    // Desactivar evento
-    window.deleteEvento = async (eventoId) => {
-      if (!confirm('¿Estás seguro de desactivar este evento? Los datos no se perderán pero el evento dejará de estar visible.')) {
+    function openModalForNew() {
+      editingEventoId = null;
+      document.getElementById('modalTitle').textContent = 'Nuevo Evento';
+      document.getElementById('formEvento').reset();
+      document.getElementById('evento_id').value = '';
+      document.getElementById('activoContainer').style.display = 'none';
+      modalEl.style.display = 'block';
+    }
+
+    async function openModalForEdit(eventoId) {
+      const evento = allEventos.find((e) => String(e.id) === String(eventoId));
+      if (!evento) {
+        showMessage('Evento no encontrado en la lista actual');
         return;
       }
 
+      editingEventoId = eventoId;
+      document.getElementById('modalTitle').textContent = 'Modificar Evento';
+      document.getElementById('evento_id').value = evento.id;
+      document.getElementById('nombre').value = evento.nombre || '';
+      document.getElementById('tipo').value = evento.tipo || 'campamento';
+      document.getElementById('descripcion').value = evento.descripcion || '';
+      document.getElementById('precio_base').value = evento.precio_base || '';
+      document.getElementById('localizacion').value = evento.localizacion || '';
+      document.getElementById('fecha_inicio').value = evento.fecha_inicio || '';
+      document.getElementById('fecha_fin').value = evento.fecha_fin || '';
+      document.getElementById('otra_informacion').value = evento.otra_informacion || '';
+      document.getElementById('activo').checked = Boolean(evento.activo);
+      document.getElementById('activoContainer').style.display = 'block';
+      modalEl.style.display = 'block';
+    }
+
+    async function deleteEvento(eventoId) {
+      if (!confirm('¿Seguro que quieres borrar/desactivar este evento?')) return;
       try {
-        const response = await fetch(`${API_URL}/api/admin/eventos/${eventoId}`, {
+        const { response, data } = await fetchJsonSafe(`${API_URL}/api/admin/eventos/${eventoId}`, {
           method: 'DELETE',
-          headers: { 'Authorization': 'Bearer ' + accessToken },
+          headers: { Authorization: `Bearer ${accessToken}` },
         });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error?.message);
-
-        showMessage('Evento desactivado exitosamente', 'success');
-        loadEventos();
+        if (!response.ok) throw new Error(data?.error?.message || `HTTP ${response.status}`);
+        showMessage('Evento borrado/desactivado correctamente', 'success');
+        await loadEventos();
       } catch (error) {
-        showMessage('Error al desactivar evento: ' + error.message, 'error');
+        showMessage(`Error al borrar evento: ${error.message}`);
       }
-    };
+    }
 
-    window.setDescuentoGlobal = async (eventoId, currentValue) => {
-      const raw = prompt('Indica el descuento global por grupo para este evento (€):', String(currentValue || 0));
-      if (raw === null) return;
-      const descuento_global = Number(raw);
-      if (!Number.isFinite(descuento_global) || descuento_global < 0) {
-        showMessage('El descuento debe ser un número mayor o igual a 0', 'error');
-        return;
-      }
-
-      try {
-        const response = await fetch(`${API_URL}/api/admin/eventos/${eventoId}/descuento-global`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': 'Bearer ' + accessToken,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ descuento_global }),
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error?.message || 'Error actualizando descuento');
-
-        showMessage('Descuento global actualizado', 'success');
-        loadEventos();
-      } catch (error) {
-        showMessage('Error al actualizar descuento: ' + error.message, 'error');
-      }
-    };
-
-    // Guardar evento
-    form.onsubmit = async (e) => {
+    async function submitEventoForm(e) {
       e.preventDefault();
+      if (!isAdmin) return;
+
+      const payload = {
+        nombre: document.getElementById('nombre').value,
+        tipo: document.getElementById('tipo').value,
+        descripcion: document.getElementById('descripcion').value,
+        precio_base: document.getElementById('precio_base').value || null,
+        localizacion: document.getElementById('localizacion').value,
+        fecha_inicio: document.getElementById('fecha_inicio').value || null,
+        fecha_fin: document.getElementById('fecha_fin').value || null,
+        otra_informacion: document.getElementById('otra_informacion').value,
+      };
+
+      if (editingEventoId) {
+        payload.activo = document.getElementById('activo').checked;
+      }
+
+      const tipoOption = document.getElementById('tipo').selectedOptions?.[0];
+      if (tipoOption?.dataset?.tipoId) {
+        payload.tipo_evento_id = tipoOption.dataset.tipoId;
+      }
+
+      const url = editingEventoId
+        ? `${API_URL}/api/admin/eventos/${editingEventoId}`
+        : `${API_URL}/api/admin/eventos`;
+      const method = editingEventoId ? 'PUT' : 'POST';
 
       try {
-        clearModalMessage();
-        const fotosText = document.getElementById('fotos').value.trim();
-        const fotosArray = fotosText ? fotosText.split('\n').map(url => url.trim()).filter(url => url) : [];
-
-        const eventoData = {
-          nombre: document.getElementById('nombre').value,
-          tipo: document.getElementById('tipo').value,
-          descripcion: document.getElementById('descripcion').value,
-          precio_base: document.getElementById('precio_base').value || null,
-          localizacion: document.getElementById('localizacion').value,
-          fecha_inicio: document.getElementById('fecha_inicio').value || null,
-          fecha_fin: document.getElementById('fecha_fin').value || null,
-          fotos: fotosArray,
-          otra_informacion: document.getElementById('otra_informacion').value,
-        };
-
-        const selectedTipoOption = document.getElementById('tipo').selectedOptions?.[0];
-        const tipoEventoId = selectedTipoOption?.dataset?.tipoId;
-        if (tipoEventoId) {
-          eventoData.tipo_evento_id = tipoEventoId;
-        }
-
-        if (editingEventoId) {
-          eventoData.activo = document.getElementById('activo').checked;
-        }
-
-        const url = editingEventoId 
-          ? `${API_URL}/api/admin/eventos/${editingEventoId}`
-          : `${API_URL}/api/admin/eventos`;
-        
-        const method = editingEventoId ? 'PUT' : 'POST';
-
-        const response = await fetch(url, {
+        const { response, data } = await fetchJsonSafe(url, {
           method,
           headers: {
-            'Authorization': 'Bearer ' + accessToken,
+            Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(eventoData),
+          body: JSON.stringify(payload),
         });
+        if (!response.ok) throw new Error(data?.error?.message || `HTTP ${response.status}`);
 
-        let data = null;
-        try {
-          data = await response.json();
-        } catch (_) {
-          data = null;
-        }
-        if (!response.ok) {
-          const serverMessage = data?.error?.message || data?.message || `Error HTTP ${response.status}`;
-          throw new Error(serverMessage);
-        }
-
-        showModalMessage(`Evento ${editingEventoId ? 'actualizado' : 'creado'} exitosamente`, 'success');
-        showMessage(`Evento ${editingEventoId ? 'actualizado' : 'creado'} exitosamente`, 'success');
-        modal.style.display = 'none';
-        loadEventos();
+        modalEl.style.display = 'none';
+        showMessage(`Evento ${editingEventoId ? 'modificado' : 'creado'} correctamente`, 'success');
+        await loadEventos();
       } catch (error) {
-        showModalMessage('Error al guardar evento: ' + error.message, 'error');
+        showMessage(`Error guardando evento: ${error.message}`);
       }
-    };
+    }
 
-    // Cerrar modal
-    document.getElementById('btnCerrarModal').onclick = () => {
-      clearModalMessage();
-      modal.style.display = 'none';
-    };
+    if (!isAdmin) {
+      document.getElementById('btnNuevoEvento').style.display = 'none';
+      document.getElementById('tabPasados').style.display = 'none';
+    }
 
-    document.getElementById('btnCancelar').onclick = () => {
-      clearModalMessage();
-      modal.style.display = 'none';
-    };
+    viewInfoEl.style.display = 'block';
+    viewInfoEl.textContent = isAnon
+      ? 'Vista pública: solo eventos próximos en modo lectura.'
+      : (isAdmin
+        ? 'Vista administrador: eventos próximos y pasados con acciones de modificar/borrar.'
+        : 'Vista monitor: solo tus eventos próximos en modo lectura.');
 
-    // Tabs
-    document.getElementById('tabActivos').onclick = () => {
-      currentTab = 'activos';
-      document.getElementById('tabActivos').classList.add('active');
-      document.getElementById('tabActivos').style.borderBottomColor = '#667eea';
-      document.getElementById('tabActivos').style.color = '#667eea';
-      document.getElementById('tabPasados').classList.remove('active');
-      document.getElementById('tabPasados').style.borderBottomColor = 'transparent';
-      document.getElementById('tabPasados').style.color = '#6b7280';
-      loadEventos();
-    };
+    document.getElementById('tabProximos').addEventListener('click', () => {
+      currentTab = 'proximos';
+      updateTabUI();
+      renderEventos();
+    });
 
-    document.getElementById('tabPasados').onclick = () => {
+    document.getElementById('tabPasados').addEventListener('click', () => {
+      if (!isAdmin) return;
       currentTab = 'pasados';
-      document.getElementById('tabPasados').classList.add('active');
-      document.getElementById('tabPasados').style.borderBottomColor = '#667eea';
-      document.getElementById('tabPasados').style.color = '#667eea';
-      document.getElementById('tabActivos').classList.remove('active');
-      document.getElementById('tabActivos').style.borderBottomColor = 'transparent';
-      document.getElementById('tabActivos').style.color = '#6b7280';
-      loadEventos();
-    };
+      updateTabUI();
+      renderEventos();
+    });
 
-    document.getElementById('eventosContainer').addEventListener('click', (e) => {
-      const editButton = e.target.closest('.btn-editar-evento');
-      if (editButton) {
-        const eventoId = editButton.getAttribute('data-evento-id');
-        if (eventoId) window.editEvento(eventoId);
+    document.getElementById('btnNuevoEvento').addEventListener('click', () => {
+      if (!isAdmin) return;
+      openModalForNew();
+    });
+
+    document.getElementById('btnCerrarModal').addEventListener('click', () => {
+      modalEl.style.display = 'none';
+    });
+
+    document.getElementById('btnCancelar').addEventListener('click', () => {
+      modalEl.style.display = 'none';
+    });
+
+    document.getElementById('formEvento').addEventListener('submit', submitEventoForm);
+
+    document.getElementById('btnRefrescar').addEventListener('click', loadEventos);
+    document.getElementById('textFilter').addEventListener('input', renderEventos);
+    document.getElementById('sortFilter').addEventListener('change', renderEventos);
+
+    document.getElementById('eventosContainer').addEventListener('click', (event) => {
+      const editBtn = event.target.closest('.btn-edit');
+      if (editBtn) {
+        if (!isAdmin) return;
+        openModalForEdit(editBtn.getAttribute('data-id'));
         return;
       }
 
-      const descuentoButton = e.target.closest('.btn-descuento-evento');
-      if (descuentoButton) {
-        const eventoId = descuentoButton.getAttribute('data-evento-id');
-        const descuento = Number(descuentoButton.getAttribute('data-descuento') || 0);
-        if (eventoId) window.setDescuentoGlobal(eventoId, descuento);
-        return;
-      }
-
-      const desactivarButton = e.target.closest('.btn-desactivar-evento');
-      if (desactivarButton) {
-        const eventoId = desactivarButton.getAttribute('data-evento-id');
-        if (eventoId) window.deleteEvento(eventoId);
+      const deleteBtn = event.target.closest('.btn-delete');
+      if (deleteBtn) {
+        if (!isAdmin) return;
+        deleteEvento(deleteBtn.getAttribute('data-id'));
       }
     });
 
-    // Mostrar mensajes
-    function showMessage(text, type) {
-      messageEl.textContent = text;
-      messageEl.className = type;
-      messageEl.style.display = 'block';
-      messageEl.style.backgroundColor = type === 'success' ? '#d1fae5' : '#fee2e2';
-      messageEl.style.color = type === 'success' ? '#065f46' : '#991b1b';
-      setTimeout(() => { messageEl.style.display = 'none'; }, 5000);
-    }
-
-    // Carga inicial
+    updateTabUI();
     loadTiposEvento();
     loadEventos();
   </script>
 
   <style>
-    .tab.active {
-      border-bottom-color: #667eea !important;
-      color: #667eea !important;
+    .tab:hover {
+      color: #4f46e5 !important;
     }
   </style>
 </Layout>

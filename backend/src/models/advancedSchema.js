@@ -64,6 +64,41 @@ async function ensureAdvancedSchema() {
       validado_en TIMESTAMPTZ
     );
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS configuracion (
+      clave TEXT PRIMARY KEY,
+      valor TEXT NOT NULL,
+      tipo TEXT DEFAULT 'texto'
+    );
+  `);
+
+  await pool.query(`
+    INSERT INTO configuracion (clave, valor, tipo)
+    VALUES
+      ('app_nombre', 'Paroikiapp', 'texto'),
+      ('parroquia_nombre', 'Parroquia San Miguel', 'texto'),
+      ('parroquia_texto', 'Bienvenidos a nuestra parroquia. Aquí encontrarás información sobre nuestros eventos y actividades para jóvenes de nuestra comunidad.', 'texto'),
+      ('parroquia_logo', '', 'imagen'),
+      ('color_primario', '#2563eb', 'color'),
+      ('color_secundario', '#1e40af', 'color'),
+      ('color_acento', '#f59e0b', 'color'),
+      ('contacto_email', '', 'texto'),
+      ('contacto_telefono', '', 'texto'),
+      ('contacto_direccion', '', 'texto')
+    ON CONFLICT (clave) DO NOTHING;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS monitor_ficheros (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      monitor_id UUID REFERENCES monitores(id) ON DELETE CASCADE,
+      ruta_interna TEXT NOT NULL,
+      nombre_original TEXT,
+      mime_type TEXT NOT NULL,
+      subido_en TIMESTAMPTZ DEFAULT now()
+    );
+  `);
 }
 
 module.exports = { ensureAdvancedSchema };

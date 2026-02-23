@@ -1,4 +1,6 @@
 const pool = require('../models/db');
+const fs = require('fs');
+const path = require('path');
 
 let hasAsignacionEventosTableCache = null;
 
@@ -613,6 +615,137 @@ const validarDocumento = async (req, res, next) => {
   }
 };
 
+// GET /api/monitor/ficheros
+const getMonitorFicheros = async (req, res, next) => {
+  try {
+    const userId = getEffectiveUserId(req);
+
+    const monitorResult = await pool.query(
+      `SELECT id
+       FROM monitores
+       WHERE usuario_id = $1 AND activo = true
+       ORDER BY creado_en DESC
+       LIMIT 1`,
+      [userId]
+    );
+
+    if (!monitorResult.rows.length) {
+      return res.status(404).json({
+        error: { code: 'MONITOR_NOT_FOUND', message: 'Monitor profile not found' },
+      });
+    }
+
+    const monitorId = monitorResult.rows[0].id;
+    const result = await pool.query(
+      `SELECT id, monitor_id, nombre_original, mime_type, subido_en
+       FROM monitor_ficheros
+       WHERE monitor_id = $1
+       ORDER BY subido_en DESC`,
+      [monitorId]
+    );
+
+    res.json({ data: result.rows, total: result.rows.length });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/monitor/ficheros
+const uploadMonitorFichero = async (req, res, next) => {
+  try {
+    const userId = getEffectiveUserId(req);
+
+    if (!req.file) {
+      return res.status(400).json({
+        error: { code: 'NO_FILE', message: 'File is required' },
+      });
+    }
+
+    const monitorResult = await pool.query(
+      `SELECT id
+       FROM monitores
+       WHERE usuario_id = $1 AND activo = true
+       ORDER BY creado_en DESC
+       LIMIT 1`,
+      [userId]
+    );
+
+    if (!monitorResult.rows.length) {
+      return res.status(404).json({
+        error: { code: 'MONITOR_NOT_FOUND', message: 'Monitor profile not found' },
+      });
+    }
+
+    const monitorId = monitorResult.rows[0].id;
+    const rutaInterna = `monitor-${userId}/${req.file.filename}`;
+    const mimeType = req.file.detectedMimeType || req.file.mimetype;
+
+    const insert = await pool.query(
+      `INSERT INTO monitor_ficheros (monitor_id, ruta_interna, nombre_original, mime_type)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, monitor_id, nombre_original, mime_type, subido_en`,
+      [monitorId, rutaInterna, req.file.originalname, mimeType]
+    );
+
+    res.status(201).json({ data: insert.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// DELETE /api/monitor/ficheros/:ficheroId
+const deleteMonitorFichero = async (req, res, next) => {
+  try {
+    const userId = getEffectiveUserId(req);
+    const { ficheroId } = req.params;
+
+    const monitorResult = await pool.query(
+      `SELECT id
+       FROM monitores
+       WHERE usuario_id = $1 AND activo = true
+       ORDER BY creado_en DESC
+       LIMIT 1`,
+      [userId]
+    );
+
+    if (!monitorResult.rows.length) {
+      return res.status(404).json({
+        error: { code: 'MONITOR_NOT_FOUND', message: 'Monitor profile not found' },
+      });
+    }
+
+    const monitorId = monitorResult.rows[0].id;
+    const result = await pool.query(
+      `DELETE FROM monitor_ficheros
+       WHERE id = $1 AND monitor_id = $2
+       RETURNING id, ruta_interna`,
+      [ficheroId, monitorId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({
+        error: { code: 'FILE_NOT_FOUND', message: 'Monitor file not found' },
+      });
+    }
+
+    const uploadsRoot = path.resolve(process.env.UPLOADS_PATH || path.join(__dirname, '..', '..', 'uploads'));
+    const filePath = path.resolve(uploadsRoot, result.rows[0].ruta_interna);
+    if (filePath === uploadsRoot || !filePath.startsWith(`${uploadsRoot}${path.sep}`)) {
+      return res.status(400).json({
+        error: { code: 'INVALID_DOCUMENT_PATH', message: 'Invalid file path' },
+      });
+    }
+
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    res.json({ mensaje: 'Fichero eliminado correctamente' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getEventosMonitor,
   getEventoRecaudacionMonitor,
@@ -625,4 +758,7 @@ module.exports = {
   getResumenEvento,
   getJovenDocumentos,
   validarDocumento,
+  getMonitorFicheros,
+  uploadMonitorFichero,
+  deleteMonitorFichero,
 };

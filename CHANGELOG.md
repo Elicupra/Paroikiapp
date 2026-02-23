@@ -1,5 +1,62 @@
 # CHANGELOG
 
+## [1.3.9] - 2026-02-23
+
+### Agregado
+- Nuevas páginas frontend de Iteración 2:
+	- `frontend/src/pages/contacto.astro`
+	- `frontend/src/pages/configuracion.astro`
+	- `frontend/src/pages/panel-monitor.astro`
+- Endpoint público para consumo de configuración en frontend:
+	- `GET /api/public/configuracion`
+
+### Modificado
+- `frontend/src/components/Navbar.astro` actualiza navegación por rol y orden alineado a Iteración 2.
+- `frontend/src/layouts/Layout.astro` integra nombre y colores dinámicos desde configuración pública.
+- `backend/src/controllers/publicController.js` y `backend/src/routes/public.js` exponen configuración pública para layout/tema.
+- `frontend/src/pages/usuarios.astro` pasa a buscador de jóvenes con filtros expandibles y contexto por rol (admin/monitor).
+- `frontend/src/pages/eventos.astro` añade filtros avanzados (tipo/fechas/texto/orden) y conmutador de vista tabla/cards, con carga por rol.
+- `frontend/src/pages/eventos.astro` corrige carga por contexto de acceso (anónimo/admin/monitor), renombra la vista principal a **Eventos Próximos** y mantiene el estado `activo` como criterio funcional.
+- `frontend/src/pages/eventos.astro` corrige bloqueo de UI con parsing seguro de sesión y timeout de carga para evitar estado infinito de "Cargando eventos...".
+- `frontend/src/pages/eventos.astro` recupera pestaña **Eventos Pasados** (admin) y asegura funcionamiento del botón **+ Nuevo Evento** en contexto administrador.
+- `frontend/src/pages/eventos.astro` reescrito con flujo simplificado y estable:
+	- pestañas funcionales de **Eventos Próximos** y **Eventos Pasados**,
+	- listado de eventos futuros con acciones **Modificar** y **Borrar** por evento,
+	- creación/edición/borrado operativo para admin,
+	- fallback de error visible si la API no responde.
+- `frontend/src/components/Navbar.astro` aclara diferencias de navegación: **Monitor (Gestión)** (admin) vs **Panel de Monitor** (admin/monitor).
+- `TODO.md` deja explícito que el ajuste final de `/monitor` queda pospuesto para un bloque posterior dedicado.
+
+### Validación
+- Build frontend en verde tras cambios:
+	- `cd frontend && npm run build`
+
+## [1.3.8] - 2026-02-23
+
+### Agregado
+- Endpoints admin de Iteración 2 para configuración y dashboard:
+	- `GET/PUT /api/admin/configuracion`
+	- `GET /api/admin/dashboard`
+	- `GET /api/admin/monitores/:monitorId/dashboard`
+- Endpoints de ficheros privados de monitor:
+	- `GET/POST/DELETE /api/monitor/ficheros`
+	- `GET /api/admin/monitores/:monitorId/ficheros`
+- Endpoint público de contacto con rate limiting dedicado:
+	- `POST /api/public/contacto`
+
+### Modificado
+- Bootstrap de esquema avanzado (`advancedSchema`) ampliado con tablas `configuracion` y `monitor_ficheros` + seed inicial de claves de configuración.
+- `seed.js` ahora asegura la tabla `configuracion` y sus valores por defecto.
+- `upload.js` incorpora middleware dedicado `uploadMonitorFichero` para almacenamiento privado por monitor.
+- `monitorController.getJovenes` se mantiene compatible y sin regresiones tras validación de suites existentes.
+
+### Validación
+- Suites smoke en verde tras cambios:
+	- `npm run smoke:api`
+	- `npm run smoke:youth`
+	- `npm run smoke:roles`
+- Comprobación rápida de endpoints nuevos: `configuracion`, `dashboard`, `monitor ficheros` y `contacto` devolviendo `200`.
+
 ## [1.3.7] - 2026-02-20
 
 ### Corregido
