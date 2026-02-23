@@ -5,65 +5,59 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 ---
 
 <Layout title="Panel de Administrador">
-  <div style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem;">
-    <h2>Panel de Administrador</h2>
-
-    <div style="margin-bottom: 1rem;">
+  <div style="max-width: 1280px; margin: 2rem auto; padding: 0 1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1rem;">
+      <h2 style="margin:0;">Panel de Administrador</h2>
       <button onclick="window.logout()" style="background-color: var(--color-danger);">Cerrar Sesión</button>
     </div>
 
-    <div style="background: #f8fafc; padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #e5e7eb; margin-bottom: 2rem;">
-      <h3 style="margin: 0 0 1rem 0;">Simular Monitor</h3>
-      <p style="margin: 0 0 1rem 0; color: #6b7280;">Selecciona un monitor para ver el panel exactamente como lo ve el monitor.</p>
-      <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-        <select id="simMonitorSelect" style="min-width: 260px; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.5rem;">
-          <option value="">Cargando monitores...</option>
-        </select>
-        <button id="btnSimular" style="background: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer;">Simular</button>
-        <button id="btnSalirSimulacion" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; display: none;">Salir de simulacion</button>
-        <span id="simStatus" style="color: #6b7280;"></span>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; margin-bottom:1rem;">
+      <div style="background:white; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1rem;">
+        <h3 style="margin:0 0 0.3rem 0; font-size:1rem; color:#374151;">Eventos</h3>
+        <div id="eventosCount" style="font-size:1.8rem; font-weight:700; color:#1d4ed8;">-</div>
+        <a href="/eventos" style="display:inline-block; margin-top:0.6rem; background:#1d4ed8; color:white; padding:0.5rem 0.8rem; border-radius:0.4rem; text-decoration:none;">Ver Eventos</a>
+      </div>
+
+      <div style="background:white; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1rem;">
+        <h3 style="margin:0 0 0.3rem 0; font-size:1rem; color:#374151;">Monitores</h3>
+        <div id="monitoresCount" style="font-size:1.8rem; font-weight:700; color:#1d4ed8;">-</div>
+        <button id="btnGoMonitores" style="margin-top:0.6rem;">Ver Monitores</button>
+      </div>
+
+      <div style="background:white; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1rem;">
+        <h3 style="margin:0 0 0.3rem 0; font-size:1rem; color:#374151;">Jóvenes</h3>
+        <div id="jovenesCount" style="font-size:1.8rem; font-weight:700; color:#1d4ed8;">-</div>
+        <a href="/usuarios?scope=all" style="display:inline-block; margin-top:0.6rem; background:#1d4ed8; color:white; padding:0.5rem 0.8rem; border-radius:0.4rem; text-decoration:none;">Ver Jóvenes</a>
+      </div>
+
+      <div style="background:white; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1rem;">
+        <h3 style="margin:0 0 0.3rem 0; font-size:1rem; color:#374151;">Recaudado Actual</h3>
+        <div id="recaudadoGlobal" style="font-size:1.8rem; font-weight:700; color:#047857;">€-</div>
+        <p style="margin:0.4rem 0 0 0; color:#6b7280; font-size:0.9rem;">Suma de pagos realizados</p>
       </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 2rem;">
-      <div style="background: white; padding: 1.5rem; border-radius: 0.5rem;">
-        <h3>Eventos</h3>
-        <div id="eventosCount" style="font-size: 2rem; color: var(--color-primary);">-</div>
-        <button onclick="window.showSection('eventos')" style="width: 100%; padding: 0.75rem; background-color: var(--color-primary); color: white; border: none; border-radius: 0.25rem; cursor: pointer; margin-bottom:0.5rem;">Ver Eventos</button>
-        <a href="/eventos" style="display:block; text-align:center; width: 100%; padding: 0.65rem; background:#1d4ed8; color: white; border-radius: 0.25rem; text-decoration:none;">Ir a gestión de eventos</a>
-      </div>
-
-      <div style="background: white; padding: 1.5rem; border-radius: 0.5rem;">
-        <h3>Usuarios</h3>
-        <div id="usuariosCount" style="font-size: 2rem; color: var(--color-primary);">-</div>
-        <button onclick="window.showSection('usuarios')" style="width: 100%; padding: 0.75rem; background-color: var(--color-primary); color: white; border: none; border-radius: 0.25rem; cursor: pointer; margin-bottom:0.5rem;">Ver Usuarios</button>
-        <a href="/usuarios" style="display:block; text-align:center; width: 100%; padding: 0.65rem; background:#1d4ed8; color: white; border-radius: 0.25rem; text-decoration:none;">Ir a gestión de usuarios</a>
-      </div>
-
-      <div style="background: white; padding: 1.5rem; border-radius: 0.5rem;">
-        <h3>Enlaces de Registro</h3>
-        <div id="linksCount" style="font-size: 2rem; color: var(--color-primary);">-</div>
-        <button onclick="window.showSection('links')" style="width: 100%; padding: 0.75rem; background-color: var(--color-primary); color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Ver Enlaces</button>
-      </div>
-
-      <div style="background: white; padding: 1.5rem; border-radius: 0.5rem;">
-        <h3>Jóvenes</h3>
-        <div id="jovenesCount" style="font-size: 2rem; color: var(--color-primary);">-</div>
-        <button onclick="window.showSection('jovenes')" style="width: 100%; padding: 0.75rem; background-color: var(--color-primary); color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Ver Jóvenes</button>
-      </div>
+    <div style="display:flex; gap:0.75rem; margin: 0.5rem 0 1rem 0; flex-wrap:wrap; border-bottom:1px solid #e5e7eb; padding-bottom:0.5rem;">
+      <button id="tabGestion" class="admin-tab" style="background:#eef2ff; color:#1e3a8a;">Gestión</button>
+      <button id="tabPresupuestos" class="admin-tab" style="background:white; color:#374151; border:1px solid #d1d5db;">Presupuestos</button>
+      <button id="tabMonitores" class="admin-tab" style="background:white; color:#374151; border:1px solid #d1d5db;">Monitores</button>
+      <button id="btnRefrescar" style="margin-left:auto; background:white; color:#374151; border:1px solid #d1d5db;">Refrescar datos</button>
     </div>
 
-    <div id="sectionContent" style="margin-top: 3rem;"></div>
-    <div id="message"></div>
+    <div id="panelGestion"></div>
+    <div id="panelPresupuestos" style="display:none;"></div>
+    <div id="panelMonitores" style="display:none;"></div>
 
-    <div id="jovenPerfilModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; overflow-y: auto;">
-      <div style="min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 2rem;">
-        <div style="background: white; border-radius: 0.75rem; max-width: 900px; width: 100%; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
-          <div style="padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between;">
-            <h3 style="margin: 0;">Perfil del joven</h3>
-            <button id="closeJovenPerfilModal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+    <div id="message" style="margin-top:1rem; display:none; padding:0.85rem; border-radius:0.5rem;"></div>
+
+    <div id="jovenPerfilModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; overflow-y:auto;">
+      <div style="min-height:100%; display:flex; align-items:center; justify-content:center; padding:2rem;">
+        <div style="background:white; border-radius:0.75rem; max-width:900px; width:100%; box-shadow:0 8px 25px rgba(0,0,0,0.15);">
+          <div style="padding:1rem 1.25rem; border-bottom:1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between;">
+            <h3 style="margin:0;">Perfil del joven</h3>
+            <button id="closeJovenPerfilModal" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#111827;">&times;</button>
           </div>
-          <div id="jovenPerfilBody" style="padding: 1.25rem;"></div>
+          <div id="jovenPerfilBody" style="padding:1.25rem;"></div>
         </div>
       </div>
     </div>
@@ -71,41 +65,508 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
 
   <script define:vars={{ API_URL }}>
     // @ts-nocheck
-    // Hacer funciones globales
-    window.accessToken = localStorage.getItem('accessToken');
-    window.messageEl = document.getElementById('message');
+    const accessToken = localStorage.getItem('accessToken');
+    const currentUser = (() => {
+      try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch (_) { return null; }
+    })();
 
-    const escapeHtml = (value) => String(value ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+    if (!accessToken || !currentUser || (currentUser.rol !== 'administrador' && currentUser.rol !== 'organizador')) {
+      window.location.href = '/login';
+    }
 
-    async function fetchWithTimeout(url, options = {}, timeoutMs = 7000) {
+    const messageEl = document.getElementById('message');
+    const panelGestion = document.getElementById('panelGestion');
+    const panelPresupuestos = document.getElementById('panelPresupuestos');
+    const panelMonitores = document.getElementById('panelMonitores');
+    const jovenPerfilModal = document.getElementById('jovenPerfilModal');
+    const jovenPerfilBody = document.getElementById('jovenPerfilBody');
+
+    const state = {
+      eventos: [],
+      usuarios: [],
+      monitores: [],
+      jovenes: [],
+      links: [],
+      recaudacionByEvento: new Map(),
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function showMessage(text, type = 'error') {
+      messageEl.style.display = 'block';
+      messageEl.textContent = text;
+      messageEl.style.backgroundColor = type === 'success' ? '#d1fae5' : '#fee2e2';
+      messageEl.style.color = type === 'success' ? '#065f46' : '#991b1b';
+      setTimeout(() => { messageEl.style.display = 'none'; }, 4500);
+    }
+
+    async function fetchJson(url, options = {}, timeoutMs = 12000) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        return await fetch(url, { ...options, signal: controller.signal });
+        const response = await fetch(url, {
+          ...options,
+          signal: controller.signal,
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            ...(options.headers || {}),
+          },
+        });
+
+        const text = await response.text();
+        let payload = null;
+        try {
+          payload = text ? JSON.parse(text) : null;
+        } catch (_) {
+          payload = null;
+        }
+
+        if (!response.ok) {
+          throw new Error(payload?.error?.message || `HTTP ${response.status}`);
+        }
+
+        return payload;
       } finally {
         clearTimeout(timeout);
       }
     }
 
-    if (!window.accessToken) {
-      window.location.href = '/login';
+    function formatCurrency(value) {
+      return `€${Number(value || 0).toFixed(2)}`;
     }
 
-    window.copyToClipboard = function(text) {
-      navigator.clipboard.writeText(text).then(() => {
-        window.messageEl.className = 'success';
-        window.messageEl.textContent = '✓ Enlace copiado al portapapeles';
-        setTimeout(() => { window.messageEl.textContent = ''; }, 3000);
-      }).catch(err => {
-        window.messageEl.className = 'error';
-        window.messageEl.textContent = 'Error al copiar: ' + err.message;
+    function setTab(tab) {
+      const tabs = {
+        gestion: document.getElementById('tabGestion'),
+        presupuestos: document.getElementById('tabPresupuestos'),
+        monitores: document.getElementById('tabMonitores'),
+      };
+
+      Object.entries(tabs).forEach(([key, el]) => {
+        const active = key === tab;
+        el.style.background = active ? '#eef2ff' : 'white';
+        el.style.color = active ? '#1e3a8a' : '#374151';
+        el.style.border = active ? 'none' : '1px solid #d1d5db';
       });
-    };
+
+      panelGestion.style.display = tab === 'gestion' ? 'block' : 'none';
+      panelPresupuestos.style.display = tab === 'presupuestos' ? 'block' : 'none';
+      panelMonitores.style.display = tab === 'monitores' ? 'block' : 'none';
+    }
+
+    function buildMaps() {
+      const jovenesPorEvento = new Map();
+      const jovenesPorMonitorUsuario = new Map();
+      const jovenesPorMonitorEvento = new Map();
+      const monitoresPorEvento = new Map();
+
+      for (const link of state.links) {
+        if (!monitoresPorEvento.has(link.evento_id)) monitoresPorEvento.set(link.evento_id, new Set());
+        monitoresPorEvento.get(link.evento_id).add(link.id);
+      }
+
+      for (const j of state.jovenes) {
+        const eventoKey = String(j.evento_id || '');
+        const monitorKey = String(j.usuario_id || '');
+        if (eventoKey) jovenesPorEvento.set(eventoKey, (jovenesPorEvento.get(eventoKey) || 0) + 1);
+        if (monitorKey) jovenesPorMonitorUsuario.set(monitorKey, (jovenesPorMonitorUsuario.get(monitorKey) || 0) + 1);
+
+        const combo = `${monitorKey}__${eventoKey}`;
+        if (monitorKey && eventoKey) {
+          jovenesPorMonitorEvento.set(combo, (jovenesPorMonitorEvento.get(combo) || 0) + 1);
+        }
+      }
+
+      return { jovenesPorEvento, monitoresPorEvento, jovenesPorMonitorUsuario, jovenesPorMonitorEvento };
+    }
+
+    async function loadAllData() {
+      const [eventosData, usuariosData, linksData, jovenesData, dashboardData] = await Promise.all([
+        fetchJson(`${API_URL}/api/admin/eventos?incluir_pasados=true`),
+        fetchJson(`${API_URL}/api/admin/usuarios`),
+        fetchJson(`${API_URL}/api/admin/registration-links`),
+        fetchJson(`${API_URL}/api/admin/jovenes`),
+        fetchJson(`${API_URL}/api/admin/dashboard`),
+      ]);
+
+      state.eventos = Array.isArray(eventosData?.data) ? eventosData.data : [];
+      state.usuarios = Array.isArray(usuariosData?.data) ? usuariosData.data : [];
+      state.links = Array.isArray(linksData?.data) ? linksData.data : [];
+      state.jovenes = Array.isArray(jovenesData?.data) ? jovenesData.data : [];
+      state.monitores = state.usuarios.filter((u) => u.rol === 'monitor');
+
+      document.getElementById('eventosCount').textContent = String(state.eventos.length);
+      document.getElementById('monitoresCount').textContent = String(state.monitores.length);
+      document.getElementById('jovenesCount').textContent = String(state.jovenes.length);
+      document.getElementById('recaudadoGlobal').textContent = formatCurrency(dashboardData?.data?.recaudacion_global || 0);
+
+      await loadRecaudacionPorEvento();
+      renderGestion();
+      renderPresupuestos();
+      renderMonitores();
+    }
+
+    async function loadRecaudacionPorEvento() {
+      state.recaudacionByEvento = new Map();
+
+      await Promise.allSettled(
+        state.eventos.map(async (evento) => {
+          try {
+            const payload = await fetchJson(`${API_URL}/api/admin/eventos/${evento.id}/recaudacion`, {}, 8000);
+            state.recaudacionByEvento.set(String(evento.id), {
+              total_recaudado: Number(payload?.data?.total_recaudado || 0),
+              total_esperado: Number(payload?.data?.total_esperado || 0),
+            });
+          } catch (_) {
+            state.recaudacionByEvento.set(String(evento.id), {
+              total_recaudado: Number(evento.total_pagado || 0),
+              total_esperado: Number(evento.total_esperado || 0),
+            });
+          }
+        })
+      );
+    }
+
+    function renderGestion() {
+      const maps = buildMaps();
+
+      panelGestion.innerHTML = `
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:1rem; margin-bottom:1rem;">
+          <div style="background:white; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1rem;">
+            <h4 style="margin:0 0 0.6rem 0;">Gestión de eventos</h4>
+            <p style="margin:0 0 0.6rem 0; color:#6b7280;">Crea, modifica o desactiva eventos.</p>
+            <a href="/eventos" style="display:inline-block; background:#1d4ed8; color:white; padding:0.5rem 0.8rem; border-radius:0.4rem; text-decoration:none;">Abrir eventos</a>
+          </div>
+          <div style="background:white; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1rem;">
+            <h4 style="margin:0 0 0.6rem 0;">Gestión de monitores</h4>
+            <p style="margin:0 0 0.6rem 0; color:#6b7280;">Listado y carga por evento.</p>
+            <button id="btnOpenMonitoresPanel" style="background:#1d4ed8;">Ver monitores</button>
+          </div>
+          <div style="background:white; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1rem;">
+            <h4 style="margin:0 0 0.6rem 0;">Gestión de jóvenes</h4>
+            <p style="margin:0 0 0.6rem 0; color:#6b7280;">Listado completo filtrado en usuarios.</p>
+            <a href="/usuarios?scope=all" style="display:inline-block; background:#1d4ed8; color:white; padding:0.5rem 0.8rem; border-radius:0.4rem; text-decoration:none;">Ir a jóvenes</a>
+          </div>
+        </div>
+
+        <div style="background:white; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1rem; overflow:auto;">
+          <h4 style="margin:0 0 0.8rem 0;">Eventos: datos operativos</h4>
+          <table style="width:100%; min-width:980px; border-collapse:collapse;">
+            <thead>
+              <tr style="background:#f9fafb; border-bottom:1px solid #e5e7eb;">
+                <th style="padding:0.65rem; text-align:left;">Evento</th>
+                <th style="padding:0.65rem; text-align:left;">Tipo</th>
+                <th style="padding:0.65rem; text-align:left;">Monitores</th>
+                <th style="padding:0.65rem; text-align:left;">Jóvenes</th>
+                <th style="padding:0.65rem; text-align:left;">Recaudado</th>
+                <th style="padding:0.65rem; text-align:left;">Esperado</th>
+                <th style="padding:0.65rem; text-align:left;">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${state.eventos.map((e) => {
+                const rec = state.recaudacionByEvento.get(String(e.id)) || { total_recaudado: 0, total_esperado: 0 };
+                const monitoresCount = maps.monitoresPorEvento.get(String(e.id))?.size || 0;
+                const jovenesCount = maps.jovenesPorEvento.get(String(e.id)) || 0;
+                return `
+                  <tr style="border-bottom:1px solid #f3f4f6;">
+                    <td style="padding:0.65rem;">${escapeHtml(e.nombre)}</td>
+                    <td style="padding:0.65rem;">${escapeHtml(e.tipo_evento_nombre || e.tipo || '-')}</td>
+                    <td style="padding:0.65rem;">${monitoresCount}</td>
+                    <td style="padding:0.65rem;">${jovenesCount}</td>
+                    <td style="padding:0.65rem;">${formatCurrency(rec.total_recaudado)}</td>
+                    <td style="padding:0.65rem;">${formatCurrency(rec.total_esperado)}</td>
+                    <td style="padding:0.65rem;">${e.activo ? 'Activo' : 'Inactivo'}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      document.getElementById('btnOpenMonitoresPanel')?.addEventListener('click', () => setTab('monitores'));
+    }
+
+    function renderPresupuestos() {
+      const recRows = state.eventos.map((e) => {
+        const rec = state.recaudacionByEvento.get(String(e.id)) || { total_recaudado: 0, total_esperado: 0 };
+        return {
+          id: e.id,
+          nombre: e.nombre,
+          total_recaudado: Number(rec.total_recaudado || 0),
+          total_esperado: Number(rec.total_esperado || 0),
+        };
+      });
+
+      const totalRecaudado = recRows.reduce((acc, r) => acc + r.total_recaudado, 0);
+      const totalEsperado = recRows.reduce((acc, r) => acc + r.total_esperado, 0);
+
+      panelPresupuestos.innerHTML = `
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:1rem; margin-bottom:1rem;">
+          <div style="background:white; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1rem;">
+            <h4 style="margin:0 0 0.4rem 0;">Total conjunto de eventos</h4>
+            <div style="font-size:1.5rem; font-weight:700; color:#1d4ed8;">${formatCurrency(totalEsperado)}</div>
+          </div>
+          <div style="background:white; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1rem;">
+            <h4 style="margin:0 0 0.4rem 0;">Recaudado actual</h4>
+            <div style="font-size:1.5rem; font-weight:700; color:#047857;">${formatCurrency(totalRecaudado)}</div>
+          </div>
+          <div style="background:white; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1rem;">
+            <h4 style="margin:0 0 0.4rem 0;">Pendiente global</h4>
+            <div style="font-size:1.5rem; font-weight:700; color:#b45309;">${formatCurrency(totalEsperado - totalRecaudado)}</div>
+          </div>
+        </div>
+
+        <div style="background:white; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1rem; overflow:auto;">
+          <h4 style="margin:0 0 0.8rem 0;">Total por evento</h4>
+          <table style="width:100%; min-width:840px; border-collapse:collapse;">
+            <thead>
+              <tr style="background:#f9fafb; border-bottom:1px solid #e5e7eb;">
+                <th style="padding:0.65rem; text-align:left;">Evento</th>
+                <th style="padding:0.65rem; text-align:left;">Total esperado</th>
+                <th style="padding:0.65rem; text-align:left;">Recaudado actual</th>
+                <th style="padding:0.65rem; text-align:left;">Pendiente</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${recRows.map((r) => `
+                <tr style="border-bottom:1px solid #f3f4f6;">
+                  <td style="padding:0.65rem;">${escapeHtml(r.nombre)}</td>
+                  <td style="padding:0.65rem;">${formatCurrency(r.total_esperado)}</td>
+                  <td style="padding:0.65rem;">${formatCurrency(r.total_recaudado)}</td>
+                  <td style="padding:0.65rem;">${formatCurrency(r.total_esperado - r.total_recaudado)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderMonitores() {
+      const maps = buildMaps();
+
+      panelMonitores.innerHTML = `
+        <div style="background:white; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1rem; overflow:auto;">
+          <h4 style="margin:0 0 0.8rem 0;">Listado de monitores</h4>
+          <table style="width:100%; min-width:1080px; border-collapse:collapse;">
+            <thead>
+              <tr style="background:#f9fafb; border-bottom:1px solid #e5e7eb;">
+                <th style="padding:0.65rem; text-align:left;">Nombre</th>
+                <th style="padding:0.65rem; text-align:left;">Email</th>
+                <th style="padding:0.65rem; text-align:left;">Estado</th>
+                <th style="padding:0.65rem; text-align:left;">Total jóvenes</th>
+                <th style="padding:0.65rem; text-align:left;">Jóvenes por evento</th>
+                <th style="padding:0.65rem; text-align:left;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${state.monitores.map((m) => {
+                const total = maps.jovenesPorMonitorUsuario.get(String(m.id)) || 0;
+                const breakdown = state.jovenes
+                  .filter((j) => String(j.usuario_id) === String(m.id))
+                  .reduce((acc, j) => {
+                    const key = j.evento_nombre || `Evento ${j.evento_id}`;
+                    acc.set(key, (acc.get(key) || 0) + 1);
+                    return acc;
+                  }, new Map());
+
+                const resumen = breakdown.size
+                  ? Array.from(breakdown.entries()).map(([evento, count]) => `${escapeHtml(evento)}: ${count}`).join(' · ')
+                  : 'Sin jóvenes asignados';
+
+                return `
+                  <tr style="border-bottom:1px solid #f3f4f6;">
+                    <td style="padding:0.65rem;">${escapeHtml(m.nombre_mostrado)}</td>
+                    <td style="padding:0.65rem;">${escapeHtml(m.email)}</td>
+                    <td style="padding:0.65rem;">${m.activo ? 'Activo' : 'Inactivo'}</td>
+                    <td style="padding:0.65rem;">${total}</td>
+                    <td style="padding:0.65rem;">${resumen}</td>
+                    <td style="padding:0.65rem;">
+                      <button class="btnMonitorJovenes" data-id="${m.id}" style="padding:0.35rem 0.6rem; background:#2563eb;">Ver jóvenes</button>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div style="margin-top:1rem; background:white; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1rem; overflow:auto;">
+          <h4 style="margin:0 0 0.8rem 0;">Jóvenes (listado administrable)</h4>
+          <table style="width:100%; min-width:1080px; border-collapse:collapse;">
+            <thead>
+              <tr style="background:#f9fafb; border-bottom:1px solid #e5e7eb;">
+                <th style="padding:0.65rem; text-align:left;">Nombre</th>
+                <th style="padding:0.65rem; text-align:left;">Monitor</th>
+                <th style="padding:0.65rem; text-align:left;">Evento</th>
+                <th style="padding:0.65rem; text-align:left;">Docs</th>
+                <th style="padding:0.65rem; text-align:left;">Pagos</th>
+                <th style="padding:0.65rem; text-align:left;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${state.jovenes.map((j) => `
+                <tr style="border-bottom:1px solid #f3f4f6;">
+                  <td style="padding:0.65rem;">${escapeHtml(j.nombre)} ${escapeHtml(j.apellidos)}</td>
+                  <td style="padding:0.65rem;">${escapeHtml(j.monitor_nombre)}</td>
+                  <td style="padding:0.65rem;">${escapeHtml(j.evento_nombre)}</td>
+                  <td style="padding:0.65rem;">${Number(j.documentos_count || 0)}</td>
+                  <td style="padding:0.65rem;">${Number(j.pagos_count || 0)}</td>
+                  <td style="padding:0.65rem; display:flex; gap:0.4rem; flex-wrap:wrap;">
+                    <button class="btnJovenPerfil" data-id="${j.id}" style="padding:0.35rem 0.6rem; background:#2563eb;">Ver perfil</button>
+                    <button class="btnJovenDelete" data-id="${j.id}" style="padding:0.35rem 0.6rem; background:#ef4444;">Borrar</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    async function renderJovenPerfil(jovenId) {
+      jovenPerfilBody.innerHTML = '<p style="color:#6b7280;">Cargando perfil...</p>';
+      jovenPerfilModal.style.display = 'block';
+
+      try {
+        const payload = await fetchJson(`${API_URL}/api/admin/jovenes/${jovenId}/perfil`);
+        const joven = payload?.data?.joven;
+        const documentos = payload?.data?.documentos || [];
+        const pagos = payload?.data?.pagos || [];
+
+        jovenPerfilBody.innerHTML = `
+          <div style="display:grid; gap:1rem;">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px,1fr)); gap:0.75rem; background:#f8fafc; border:1px solid #e5e7eb; border-radius:0.5rem; padding:1rem;">
+              <div>
+                <label style="display:block; font-weight:600; margin-bottom:0.35rem;">Nombre</label>
+                <input id="perfil_nombre" value="${escapeHtml(joven?.nombre || '')}" style="width:100%;" />
+              </div>
+              <div>
+                <label style="display:block; font-weight:600; margin-bottom:0.35rem;">Apellidos</label>
+                <input id="perfil_apellidos" value="${escapeHtml(joven?.apellidos || '')}" style="width:100%;" />
+              </div>
+              <div>
+                <p style="margin:0.3rem 0;"><strong>Evento:</strong> ${escapeHtml(joven?.evento_nombre || '-')}</p>
+                <p style="margin:0.3rem 0;"><strong>Monitor:</strong> ${escapeHtml(joven?.monitor_nombre || '-')}</p>
+              </div>
+              <div style="display:flex; gap:0.5rem; align-items:flex-end;">
+                <button id="btnGuardarPerfilJoven" data-id="${jovenId}" style="background:#2563eb;">Guardar cambios</button>
+                <button id="btnBorrarPerfilJoven" data-id="${jovenId}" style="background:#ef4444;">Borrar joven</button>
+              </div>
+            </div>
+
+            <div style="background:#fff; border:1px solid #e5e7eb; border-radius:0.5rem; padding:1rem;">
+              <h4 style="margin:0 0 0.7rem 0;">Documentos</h4>
+              ${documentos.length
+                ? documentos.map((doc) => `<div style="padding:0.45rem 0; border-bottom:1px solid #f1f5f9;"><strong>${escapeHtml(doc.tipo)}</strong> · ${escapeHtml(doc.nombre_original || 'archivo')} · ${doc.validado ? 'Validado' : 'Pendiente'}</div>`).join('')
+                : '<p style="margin:0; color:#6b7280;">Sin documentos</p>'}
+            </div>
+
+            <div style="background:#fff; border:1px solid #e5e7eb; border-radius:0.5rem; padding:1rem;">
+              <h4 style="margin:0 0 0.7rem 0;">Pagos</h4>
+              ${pagos.length
+                ? pagos.map((p) => `<div style="padding:0.45rem 0; border-bottom:1px solid #f1f5f9;">Plazo ${p.plazo_numero} · ${formatCurrency(p.cantidad)} · ${p.pagado ? 'Pagado' : 'Pendiente'}</div>`).join('')
+                : '<p style="margin:0; color:#6b7280;">Sin pagos</p>'}
+            </div>
+          </div>
+        `;
+
+        document.getElementById('btnGuardarPerfilJoven')?.addEventListener('click', () => updateJoven(jovenId));
+        document.getElementById('btnBorrarPerfilJoven')?.addEventListener('click', () => deleteJoven(jovenId, true));
+      } catch (error) {
+        jovenPerfilBody.innerHTML = `<p style="color:#b91c1c;">${escapeHtml(error.message)}</p>`;
+      }
+    }
+
+    async function updateJoven(jovenId) {
+      const nombre = document.getElementById('perfil_nombre')?.value?.trim() || '';
+      const apellidos = document.getElementById('perfil_apellidos')?.value?.trim() || '';
+
+      if (!nombre || !apellidos) {
+        showMessage('Nombre y apellidos son obligatorios');
+        return;
+      }
+
+      try {
+        await fetchJson(`${API_URL}/api/admin/jovenes/${jovenId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre, apellidos }),
+        });
+        showMessage('Joven actualizado correctamente', 'success');
+        await loadAllData();
+        await renderJovenPerfil(jovenId);
+      } catch (error) {
+        showMessage(`Error actualizando joven: ${error.message}`);
+      }
+    }
+
+    async function deleteJoven(jovenId, closeAfter = false) {
+      if (!confirm('¿Seguro que quieres eliminar este joven? Esta acción no se puede deshacer.')) return;
+      try {
+        await fetchJson(`${API_URL}/api/admin/jovenes/${jovenId}`, { method: 'DELETE' });
+        showMessage('Joven eliminado correctamente', 'success');
+        if (closeAfter) closeJovenModal();
+        await loadAllData();
+      } catch (error) {
+        showMessage(`Error eliminando joven: ${error.message}`);
+      }
+    }
+
+    function closeJovenModal() {
+      jovenPerfilModal.style.display = 'none';
+      jovenPerfilBody.innerHTML = '';
+    }
+
+    document.getElementById('closeJovenPerfilModal').addEventListener('click', closeJovenModal);
+    jovenPerfilModal.addEventListener('click', (e) => {
+      if (e.target === jovenPerfilModal) closeJovenModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && jovenPerfilModal.style.display !== 'none') closeJovenModal();
+    });
+
+    document.getElementById('panelMonitores').addEventListener('click', (e) => {
+      const perfilBtn = e.target.closest('.btnJovenPerfil');
+      if (perfilBtn) {
+        renderJovenPerfil(perfilBtn.getAttribute('data-id'));
+        return;
+      }
+
+      const deleteBtn = e.target.closest('.btnJovenDelete');
+      if (deleteBtn) {
+        deleteJoven(deleteBtn.getAttribute('data-id'));
+        return;
+      }
+
+      const monitorBtn = e.target.closest('.btnMonitorJovenes');
+      if (monitorBtn) {
+        const monitorId = monitorBtn.getAttribute('data-id');
+        window.location.href = `/usuarios?scope=mine&monitorId=${encodeURIComponent(monitorId)}`;
+      }
+    });
+
+    document.getElementById('tabGestion').addEventListener('click', () => setTab('gestion'));
+    document.getElementById('tabPresupuestos').addEventListener('click', () => setTab('presupuestos'));
+    document.getElementById('tabMonitores').addEventListener('click', () => setTab('monitores'));
+    document.getElementById('btnGoMonitores').addEventListener('click', () => setTab('monitores'));
+    document.getElementById('btnRefrescar').addEventListener('click', async () => {
+      try {
+        await loadAllData();
+        showMessage('Datos actualizados', 'success');
+      } catch (error) {
+        showMessage(`Error refrescando datos: ${error.message}`);
+      }
+    });
 
     window.logout = function() {
       localStorage.removeItem('accessToken');
@@ -114,331 +575,13 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001';
       window.location.href = '/';
     };
 
-    const simKey = 'simulatedMonitor';
-    const simSelect = document.getElementById('simMonitorSelect');
-    const simStatus = document.getElementById('simStatus');
-    const btnSimular = document.getElementById('btnSimular');
-    const btnSalirSimulacion = document.getElementById('btnSalirSimulacion');
-    const jovenPerfilModal = document.getElementById('jovenPerfilModal');
-    const jovenPerfilBody = document.getElementById('jovenPerfilBody');
-
-    document.getElementById('closeJovenPerfilModal').onclick = () => {
-      jovenPerfilModal.style.display = 'none';
-    };
-
-    function updateSimStatus() {
-      const saved = localStorage.getItem(simKey);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          simStatus.textContent = `Simulando: ${parsed.nombre}`;
-          btnSalirSimulacion.style.display = 'inline-block';
-          if (simSelect && parsed.id) {
-            simSelect.value = parsed.id;
-          }
-          return;
-        } catch (e) {
-          localStorage.removeItem(simKey);
-        }
-      }
-      simStatus.textContent = '';
-      btnSalirSimulacion.style.display = 'none';
-    }
-
-    async function loadMonitoresSimulacion() {
+    (async () => {
       try {
-        const response = await fetch(`${API_URL}/api/admin/usuarios`, {
-          headers: { 'Authorization': 'Bearer ' + window.accessToken }
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error?.message || 'Error al cargar monitores');
-
-        const monitores = (data.data || []).filter(u => u.rol === 'monitor' && u.activo);
-        simSelect.innerHTML = '<option value="">Selecciona un monitor</option>';
-        monitores.forEach(m => {
-          const option = document.createElement('option');
-          option.value = m.id;
-          option.textContent = `${m.nombre_mostrado} (${m.email})`;
-          simSelect.appendChild(option);
-        });
-
-        updateSimStatus();
+        setTab('gestion');
+        await loadAllData();
       } catch (error) {
-        simSelect.innerHTML = '<option value="">Error al cargar monitores</option>';
+        showMessage(`Error cargando panel: ${error.message}`);
       }
-    }
-
-    btnSimular.onclick = () => {
-      const selectedId = simSelect.value;
-      if (!selectedId) {
-        window.messageEl.className = 'error';
-        window.messageEl.textContent = 'Selecciona un monitor para simular';
-        return;
-      }
-
-      const selectedText = simSelect.options[simSelect.selectedIndex].textContent;
-      localStorage.setItem(simKey, JSON.stringify({ id: selectedId, nombre: selectedText }));
-      localStorage.removeItem('selectedEvento');
-      updateSimStatus();
-      window.location.href = '/monitor';
-    };
-
-    btnSalirSimulacion.onclick = () => {
-      localStorage.removeItem(simKey);
-      localStorage.removeItem('selectedEvento');
-      updateSimStatus();
-    };
-
-    window.loadEventos = async function() {
-      try {
-        const response = await fetchWithTimeout(`${API_URL}/api/admin/eventos`, {
-          headers: { 'Authorization': 'Bearer ' + window.accessToken }
-        });
-        const data = await response.json();
-        
-        if (!response.ok) throw new Error(data.error?.message || 'Error al cargar eventos');
-        
-        const eventos = data.data || [];
-        const recaudacionByEvento = new Map();
-
-        await Promise.allSettled(eventos.map(async (evento) => {
-          try {
-            const recResponse = await fetchWithTimeout(`${API_URL}/api/admin/eventos/${evento.id}/recaudacion`, {
-              headers: { 'Authorization': 'Bearer ' + window.accessToken }
-            }, 3500);
-
-            if (recResponse.ok) {
-              const recData = await recResponse.json();
-              recaudacionByEvento.set(evento.id, {
-                total_recaudado: Number(recData.data?.total_recaudado || 0),
-                total_esperado: Number(recData.data?.total_esperado || 0),
-              });
-            }
-          } catch (_) {}
-        }));
-
-        document.getElementById('eventosCount').textContent = data.total;
-        const content = document.getElementById('sectionContent');
-        content.innerHTML = '<h3>Eventos</h3>';
-        
-        if (data.total === 0) {
-          content.innerHTML += '<p>No hay eventos registrados</p>';
-        } else {
-          const table = document.createElement('table');
-          table.style.cssText = 'width: 100%; border-collapse: collapse; margin-top: 1rem;';
-          table.innerHTML = `
-            <thead>
-              <tr style="background-color: var(--color-gray-light);">
-                <th style="padding: 0.75rem; text-align: left;">Nombre</th>
-                <th style="padding: 0.75rem; text-align: left;">Tipo</th>
-                <th style="padding: 0.75rem; text-align: left;">Precio</th>
-                <th style="padding: 0.75rem; text-align: left;">Recaudado</th>
-                <th style="padding: 0.75rem; text-align: left;">Esperado</th>
-                <th style="padding: 0.75rem; text-align: left;">Activo</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${eventos.map(e => {
-                const recaudacion = recaudacionByEvento.get(e.id);
-                const totalRecaudado = Number(recaudacion?.total_recaudado ?? e.total_pagado ?? 0);
-                const totalEsperado = Number(recaudacion?.total_esperado ?? e.total_esperado ?? 0);
-                return `
-                <tr style="border-bottom: 1px solid #d1d5db;">
-                  <td style="padding: 0.75rem;">${escapeHtml(e.nombre)}</td>
-                  <td style="padding: 0.75rem;">${escapeHtml(e.tipo_evento_nombre || e.tipo)}</td>
-                  <td style="padding: 0.75rem;">€${e.precio_base || '-'}</td>
-                  <td style="padding: 0.75rem;">€${totalRecaudado.toFixed(2)}</td>
-                  <td style="padding: 0.75rem;">€${totalEsperado.toFixed(2)}</td>
-                  <td style="padding: 0.75rem;">${e.activo ? 'Sí' : 'No'}</td>
-                </tr>
-              `;
-              }).join('')}
-            </tbody>
-          `;
-          content.appendChild(table);
-        }
-      } catch (error) {
-        window.messageEl.className = 'error';
-        window.messageEl.textContent = 'Error: ' + error.message;
-      }
-    };
-
-    window.loadUsuarios = async function() {
-      try {
-        const response = await fetch(`${API_URL}/api/admin/usuarios`, {
-          headers: { 'Authorization': 'Bearer ' + window.accessToken }
-        });
-        const data = await response.json();
-        
-        if (!response.ok) throw new Error(data.error?.message || 'Error al cargar usuarios');
-        
-        document.getElementById('usuariosCount').textContent = data.total;
-        const content = document.getElementById('sectionContent');
-        content.innerHTML = '<h3>Usuarios</h3>';
-        
-        const table = document.createElement('table');
-        table.style.cssText = 'width: 100%; border-collapse: collapse; margin-top: 1rem;';
-        table.innerHTML = `
-          <thead>
-            <tr style="background-color: var(--color-gray-light);">
-              <th style="padding: 0.75rem; text-align: left;">Email</th>
-              <th style="padding: 0.75rem; text-align: left;">Nombre</th>
-              <th style="padding: 0.75rem; text-align: left;">Rol</th>
-              <th style="padding: 0.75rem; text-align: left;">Activo</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.data.map(u => `
-              <tr style="border-bottom: 1px solid #d1d5db;">
-                <td style="padding: 0.75rem;">${escapeHtml(u.email)}</td>
-                <td style="padding: 0.75rem;">${escapeHtml(u.nombre_mostrado)}</td>
-                <td style="padding: 0.75rem;">${escapeHtml(u.rol)}</td>
-                <td style="padding: 0.75rem;">${u.activo ? 'Sí' : 'No'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        `;
-        content.appendChild(table);
-      } catch (error) {
-        window.messageEl.className = 'error';
-        window.messageEl.textContent = 'Error: ' + error.message;
-      }
-    };
-
-    window.loadRegistrationLinks = async function() {
-      try {
-        const response = await fetch(`${API_URL}/api/admin/registration-links`, {
-          headers: { 'Authorization': 'Bearer ' + window.accessToken }
-        });
-        const data = await response.json();
-        
-        if (!response.ok) throw new Error(data.error?.message || 'Error al cargar enlaces');
-        
-        document.getElementById('linksCount').textContent = data.total;
-        const content = document.getElementById('sectionContent');
-        content.innerHTML = '<h3>Enlaces de Registro</h3>';
-        
-        data.data.forEach(link => {
-          const div = document.createElement('div');
-          div.style.cssText = 'background: #f0f9ff; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; border-left: 4px solid #3b82f6;';
-          div.innerHTML = `
-            <p style="margin: 0 0 0.25rem 0;"><strong>${escapeHtml(link.evento_nombre)}</strong></p>
-            <p style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: #666;">Monitor: ${escapeHtml(link.monitor_nombre)}${link.max_jovenes ? ` · Cupo: ${link.max_jovenes}` : ''}</p>
-            <input type="text" value="${escapeHtml(link.url)}" readonly style="width: 100%; padding: 0.5rem; font-size: 0.85rem; margin-bottom: 0.5rem; font-family: monospace;" />
-            <button onclick='window.copyToClipboard(${JSON.stringify(link.url)})' style="background-color: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer;">Copiar</button>
-          `;
-          content.appendChild(div);
-        });
-      } catch (error) {
-        window.messageEl.className = 'error';
-        window.messageEl.textContent = 'Error: ' + error.message;
-      }
-    };
-
-    window.loadJovenes = async function() {
-      try {
-        // Obtener todos los jóvenes
-        const response = await fetch(`${API_URL}/api/admin/jovenes`, {
-          headers: { 'Authorization': 'Bearer ' + window.accessToken }
-        });
-        const data = await response.json();
-        
-        if (!response.ok) throw new Error(data.error?.message || 'Error al cargar jóvenes');
-        
-        document.getElementById('jovenesCount').textContent = data.total;
-        const content = document.getElementById('sectionContent');
-        content.innerHTML = '<h3>Jóvenes Registrados</h3>';
-        
-        if (data.total === 0) {
-          content.innerHTML += '<p>No hay jóvenes registrados</p>';
-        } else {
-          const table = document.createElement('table');
-          table.style.cssText = 'width: 100%; border-collapse: collapse; margin-top: 1rem;';
-          table.innerHTML = `
-            <thead>
-              <tr style="background-color: var(--color-gray-light);">
-                <th style="padding: 0.75rem; text-align: left;">Nombre</th>
-                <th style="padding: 0.75rem; text-align: left;">Monitor</th>
-                <th style="padding: 0.75rem; text-align: left;">Evento</th>
-                <th style="padding: 0.75rem; text-align: left;">Docs</th>
-                <th style="padding: 0.75rem; text-align: left;">Pagos</th>
-                <th style="padding: 0.75rem; text-align: left;">Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data.data.map(j => `
-                <tr style="border-bottom: 1px solid #d1d5db;">
-                  <td style="padding: 0.75rem;">${escapeHtml(j.nombre)} ${escapeHtml(j.apellidos)}</td>
-                  <td style="padding: 0.75rem;">${escapeHtml(j.monitor_nombre)}</td>
-                  <td style="padding: 0.75rem;">${escapeHtml(j.evento_nombre)}</td>
-                  <td style="padding: 0.75rem;">${j.documentos_count}</td>
-                  <td style="padding: 0.75rem;">${j.pagos_count}</td>
-                  <td style="padding: 0.75rem;"><button onclick="window.verPerfilJoven('${j.id}')" style="padding: 0.35rem 0.75rem; background: #2563eb; color: white; border: none; border-radius: 0.35rem; cursor: pointer;">Ver perfil</button></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          `;
-          content.appendChild(table);
-        }
-      } catch (error) {
-        window.messageEl.className = 'error';
-        window.messageEl.textContent = 'Error: ' + error.message;
-      }
-    };
-
-    window.verPerfilJoven = async function(jovenId) {
-      jovenPerfilBody.innerHTML = '<p style="color:#6b7280;">Cargando perfil...</p>';
-      jovenPerfilModal.style.display = 'block';
-
-      try {
-        const response = await fetch(`${API_URL}/api/admin/jovenes/${jovenId}/perfil`, {
-          headers: { 'Authorization': 'Bearer ' + window.accessToken }
-        });
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error?.message || 'Error al cargar perfil');
-        }
-
-        const joven = data.data?.joven;
-        const documentos = data.data?.documentos || [];
-        const pagos = data.data?.pagos || [];
-
-        jovenPerfilBody.innerHTML = `
-          <div style="display:grid; gap:1rem;">
-            <div style="background:#f8fafc; padding:1rem; border-radius:0.5rem; border:1px solid #e5e7eb;">
-              <h4 style="margin:0 0 0.5rem 0;">${escapeHtml(joven.nombre)} ${escapeHtml(joven.apellidos)}</h4>
-              <p style="margin:0.25rem 0; color:#374151;"><strong>Evento:</strong> ${escapeHtml(joven.evento_nombre)}</p>
-              <p style="margin:0.25rem 0; color:#374151;"><strong>Monitor:</strong> ${escapeHtml(joven.monitor_nombre)}</p>
-            </div>
-            <div style="background:#fff; padding:1rem; border-radius:0.5rem; border:1px solid #e5e7eb;">
-              <h4 style="margin:0 0 0.75rem 0;">Documentos</h4>
-              ${documentos.length ? documentos.map((doc) => `<div style="padding:0.5rem 0; border-bottom:1px solid #f1f5f9;"><strong>${escapeHtml(doc.tipo)}</strong> · ${escapeHtml(doc.nombre_original || 'archivo')} · ${doc.validado ? 'Validado' : 'Pendiente'}</div>`).join('') : '<p style="margin:0; color:#6b7280;">Sin documentos</p>'}
-            </div>
-            <div style="background:#fff; padding:1rem; border-radius:0.5rem; border:1px solid #e5e7eb;">
-              <h4 style="margin:0 0 0.75rem 0;">Pagos</h4>
-              ${pagos.length ? pagos.map((p) => `<div style="padding:0.5rem 0; border-bottom:1px solid #f1f5f9;">Plazo ${p.plazo_numero} · €${Number(p.cantidad || 0).toFixed(2)} · ${p.pagado ? 'Pagado' : 'Pendiente'}</div>`).join('') : '<p style="margin:0; color:#6b7280;">Sin pagos</p>'}
-            </div>
-          </div>
-        `;
-      } catch (error) {
-        jovenPerfilBody.innerHTML = `<p style="color:#b91c1c;">${escapeHtml(error.message)}</p>`;
-      }
-    };
-
-    window.showSection = function(section) {
-      window.messageEl.innerHTML = '';
-      if (section === 'eventos') window.loadEventos();
-      else if (section === 'usuarios') window.loadUsuarios();
-      else if (section === 'links') window.loadRegistrationLinks();
-      else if (section === 'jovenes') window.loadJovenes();
-    };
-
-    // Cargar datos iniciales
-    window.loadEventos();
-    window.loadUsuarios();
-    window.loadRegistrationLinks();
-    window.loadJovenes();
-    loadMonitoresSimulacion();
+    })();
   </script>
 </Layout>

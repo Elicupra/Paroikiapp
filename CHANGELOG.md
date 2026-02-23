@@ -24,6 +24,13 @@
 	- listado de eventos futuros con acciones **Modificar** y **Borrar** por evento,
 	- creación/edición/borrado operativo para admin,
 	- fallback de error visible si la API no responde.
+- `frontend/src/pages/admin.astro` rediseñado para eliminar simulación de monitor y organizar la UX en subpaneles:
+	- **Gestión** (eventos/monitores/jóvenes),
+	- **Presupuestos** (total global, total por evento, recaudado actual),
+	- **Monitores** (listado con jóvenes asociados por evento).
+- `frontend/src/pages/admin.astro` mejora calidad/cantidad de datos de eventos con métricas de monitores y jóvenes por evento.
+- `frontend/src/pages/admin.astro` corrige modal de perfil de joven (cierre por botón, overlay y tecla Escape) e incorpora gestión directa de joven (editar/borrar).
+- `frontend/src/pages/admin.astro` actualiza acciones principales: **Ver Usuarios** → **Ver Monitores** y botón de jóvenes enlazado a `/usuarios?scope=all`.
 - `frontend/src/components/Navbar.astro` aclara diferencias de navegación: **Monitor (Gestión)** (admin) vs **Panel de Monitor** (admin/monitor).
 - `TODO.md` deja explícito que el ajuste final de `/monitor` queda pospuesto para un bloque posterior dedicado.
 
